@@ -6,6 +6,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
+const userAPI = require('./api/user');
+
 const app = express();
 const PORT = process.env.APP_PORT || 3000;
 
@@ -19,6 +21,9 @@ app.use(cookieParser());
 app.get('/', (req, res) => {
   return res.json({ message: 'Hallo traveller! ' });
 });
+
+app.use('/api/user', userAPI);
+
 
 app.use((err, req, res, next) => {
   console.error('ERROR: ', err.message || err);
