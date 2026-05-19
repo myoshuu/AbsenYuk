@@ -32,3 +32,9 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server sudah online pada  http://localhost:${PORT}/`);
 });
+
+process.on('SIGTERM', async () => {
+  console.log('Mematikan server...');
+  await require('./database/db').end();
+  process.exit(0);
+});
