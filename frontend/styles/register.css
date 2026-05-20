@@ -1,4 +1,8 @@
 /* ===========================
+   REGISTER PAGE STYLESHEET
+=========================== */
+
+/* ===========================
    CSS Variables & Reset
 =========================== */
 *, *::before, *::after {
@@ -53,7 +57,7 @@ body {
 }
 
 /* ===========================
-   Container
+   CONTAINER
 =========================== */
 .container {
   position: relative;
@@ -67,7 +71,7 @@ body {
 }
 
 /* ===========================
-   Card — Fade-in on load
+   REGISTER CARD
 =========================== */
 .card {
   background: var(--card-bg);
@@ -90,9 +94,7 @@ body {
   }
 }
 
-/* ===========================
-   Card Header
-=========================== */
+/* ───────────────────────── Card Header ────────────────────────── */
 .card-header {
   text-align: center;
   margin-bottom: 36px;
@@ -117,7 +119,7 @@ body {
 }
 
 /* ===========================
-   Card Body & Input Groups
+   FORM INPUTS
 =========================== */
 .card-body {
   display: flex;
@@ -168,7 +170,7 @@ body {
   font-size: 0.87rem;
 }
 
-/* Focus */
+/* Focus state */
 .input-field:focus {
   background: var(--input-focus-bg);
   border-color: var(--accent);
@@ -241,7 +243,7 @@ body {
 }
 
 /* ===========================
-   Password Strength Meter
+   PASSWORD STRENGTH METER
 =========================== */
 .strength-bar-wrap {
   height: 4px;
@@ -278,26 +280,7 @@ body {
 }
 
 /* ===========================
-   Forgot Password Link
-=========================== */
-.forgot-link {
-  display: inline-block;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  align-self: flex-end;
-  margin-top: -8px;
-  margin-bottom: 28px;
-  transition: color var(--transition);
-}
-
-.forgot-link:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-/* ===========================
-   Primary Button
+   REGISTER BUTTON
 =========================== */
 .btn-primary {
   width: 100%;
@@ -356,7 +339,7 @@ body {
   transform: none;
 }
 
-/* Spinner */
+/* Spinner loader */
 .btn-loader {
   display: none;
   width: 16px;
@@ -377,7 +360,7 @@ body {
 }
 
 /* ===========================
-   Bottom Text & Nav Link
+   NAVIGATION & FOOTER TEXT
 =========================== */
 .bottom-text {
   text-align: center;
@@ -399,7 +382,7 @@ body {
 }
 
 /* ===========================
-   Toast Notification
+   TOAST NOTIFICATION
 =========================== */
 .toast {
   position: fixed;
@@ -437,13 +420,14 @@ body {
 }
 
 /* ===========================
-   Responsive
+   RESPONSIVE DESIGN
 =========================== */
 @media (max-width: 480px) {
   .card {
     padding: 36px 28px 32px;
     border-radius: 22px;
   }
+
   .title {
     font-size: 1.75rem;
   }
@@ -453,6 +437,7 @@ body {
   .card {
     padding: 30px 20px 28px;
   }
+
   .title {
     font-size: 1.5rem;
   }

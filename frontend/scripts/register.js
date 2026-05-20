@@ -1,8 +1,8 @@
 /**
- * script.js — Shared logic for Login & Register pages
+ * register.js — Register page logic
  *
- * Auto-detects which page is active by reading the page title,
- * then initialises the correct form handler.
+ * Handles email, username & password validation with strength meter,
+ * form submission, and user feedback with toast notifications.
  */
 
 'use strict';
@@ -61,7 +61,7 @@ function setLoading(btn, loader, isLoading) {
   loader.classList.toggle('loading', isLoading);
 }
 
-// ─── Shared: Toggle password visibility ──────────────────────────────────────
+// ─── Toggle password visibility ──────────────────────────────────────────────
 function initPasswordToggle() {
   const toggleBtn = $('togglePassword');
   const pwInput = $('password');
@@ -92,7 +92,7 @@ function initPasswordToggle() {
   });
 }
 
-// ─── Shared: Attach real-time blur validation for email ───────────────────────
+// ─── Attach real-time blur validation for email ──────────────────────────────
 function initEmailField(cb) {
   const input = $('email');
   const error = $('emailError');
@@ -104,7 +104,7 @@ function initEmailField(cb) {
   });
 }
 
-// ─── Shared: Attach real-time blur validation for password ────────────────────
+// ─── Attach real-time blur validation for password ─────────────────────────────
 function initPasswordField(cb) {
   const input = $('password');
   const error = $('passwordError');
@@ -116,7 +116,7 @@ function initPasswordField(cb) {
   });
 }
 
-// ─── Shared: Enter key submits ────────────────────────────────────────────────
+// ─── Enter key submits ────────────────────────────────────────────────────────
 function initEnterKey(fields, btn) {
   fields.forEach((id) => {
     const el = $(id);
@@ -125,68 +125,28 @@ function initEnterKey(fields, btn) {
 }
 
 // =============================================================================
-// LOGIN PAGE
+// PASSWORD STRENGTH METER
 // =============================================================================
-function initLogin() {
-  const submitBtn = $('submitBtn');
-  const btnLoader = $('btnLoader');
-  if (!submitBtn) return;
 
-  // ── Validators ──────────────────────────────────────────────────────────────
-  function validateEmail(input, error) {
-    const val = input.value.trim();
-    if (!val) { showError(input, error, 'Email tidak boleh kosong.'); return false; }
-    if (!isValidEmail(val)) { showError(input, error, 'Format email tidak valid.'); return false; }
-    clearError(input, error); markSuccess(input); return true;
-  }
-
-  function validatePassword(input, error) {
-    const val = input.value;
-    if (!val) { showError(input, error, 'Password tidak boleh kosong.'); return false; }
-    if (val.length < 8) { showError(input, error, 'Password minimal 8 karakter.'); return false; }
-    clearError(input, error); markSuccess(input); return true;
-  }
-
-  // ── Init fields ─────────────────────────────────────────────────────────────
-  initEmailField(validateEmail);
-  initPasswordField(validatePassword);
-  initPasswordToggle();
-  initEnterKey(['email', 'password'], submitBtn);
-
-  // ── Submit ──────────────────────────────────────────────────────────────────
-  submitBtn.addEventListener('click', () => {
-    const emailInput = $('email');
-    const passwordInput = $('password');
-    const emailError = $('emailError');
-    const passwordError = $('passwordError');
-
-    const ok1 = validateEmail(emailInput, emailError);
-    const ok2 = validatePassword(passwordInput, passwordError);
-
-    if (!ok1 || !ok2) return;
-
-    setLoading(submitBtn, btnLoader, true);
-
-    // Simulate async login — replace with real API call
-    setTimeout(() => {
-      setLoading(submitBtn, btnLoader, false);
-      showToast('✓  Login berhasil! Selamat datang kembali.', 'success');
-    }, 1800);
-  });
+// ─── Calculate password strength score ──────────────────────────────────────
+function scorePassword(val) {
+  let score = 0;
+  if (val.length >= 6) score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  return score;
 }
 
-// =============================================================================
-// REGISTER PAGE
-// =============================================================================
-function initRegister() {
-  const submitBtn = $('submitBtn');
-  const btnLoader = $('btnLoader');
-  if (!submitBtn) return;
-
-  // ── Password strength meter ─────────────────────────────────────────────────
+// ─── Initialize password strength meter ────────────────────────────────────
+function initPasswordStrengthMeter() {
   const strengthWrap = $('strengthWrap');
   const strengthBar = $('strengthBar');
   const strengthLabel = $('strengthLabel');
+  const pwInput = $('password');
+
+  if (!pwInput || !strengthWrap) return;
 
   const STRENGTH_CONFIG = [
     { max: 0, label: '', color: 'transparent', width: '0%' },
@@ -196,23 +156,14 @@ function initRegister() {
     { max: Infinity, label: 'Sangat Kuat', color: '#2a7a55', width: '100%' },
   ];
 
-  function scorePassword(val) {
-    let score = 0;
-    if (val.length >= 6) score++;
-    if (val.length >= 10) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    return score;
-  }
-
+  // Update strength meter display
   function updateStrength(val) {
-    if (!strengthWrap) return;
     if (!val) {
       strengthWrap.classList.remove('show');
       strengthLabel.classList.remove('show');
       return;
     }
+
     const score = scorePassword(val);
     const cfg = STRENGTH_CONFIG.find((c) => score <= c.max) || STRENGTH_CONFIG[STRENGTH_CONFIG.length - 1];
 
@@ -224,35 +175,74 @@ function initRegister() {
     strengthLabel.classList.toggle('show', !!cfg.label);
   }
 
-  const pwInput = $('password');
-  if (pwInput) pwInput.addEventListener('input', () => updateStrength(pwInput.value));
+  // Listen to password input changes
+  pwInput.addEventListener('input', () => updateStrength(pwInput.value));
+}
 
-  // ── Validators ──────────────────────────────────────────────────────────────
+// =============================================================================
+// REGISTER INITIALIZATION
+// =============================================================================
+function initRegister() {
+  const submitBtn = $('submitBtn');
+  const btnLoader = $('btnLoader');
+  if (!submitBtn) return;
+
+  // ── Email validator ─────────────────────────────────────────────────────────
   function validateEmail(input, error) {
     const val = input.value.trim();
-    if (!val) { showError(input, error, 'Email tidak boleh kosong.'); return false; }
-    if (!isValidEmail(val)) { showError(input, error, 'Format email tidak valid.'); return false; }
-    clearError(input, error); markSuccess(input); return true;
+    if (!val) {
+      showError(input, error, 'Email tidak boleh kosong.');
+      return false;
+    }
+    if (!isValidEmail(val)) {
+      showError(input, error, 'Format email tidak valid.');
+      return false;
+    }
+    clearError(input, error);
+    markSuccess(input);
+    return true;
   }
 
+  // ── Username validator (maksimal 10 karakter, no spaces) ────────────────────
   function validateUsername(input, error) {
     const val = input.value.trim();
-    if (!val) { showError(input, error, 'Username tidak boleh kosong.'); return false; }
-    if (val.length > 10) { showError(input, error, 'Username maksimal 10 karakter.'); return false; }
-    if (/\s/.test(val)) { showError(input, error, 'Username tidak boleh mengandung spasi.'); return false; }
-    clearError(input, error); markSuccess(input); return true;
+    if (!val) {
+      showError(input, error, 'Username tidak boleh kosong.');
+      return false;
+    }
+    if (val.length > 10) {
+      showError(input, error, 'Username maksimal 10 karakter.');
+      return false;
+    }
+    if (/\s/.test(val)) {
+      showError(input, error, 'Username tidak boleh mengandung spasi.');
+      return false;
+    }
+    clearError(input, error);
+    markSuccess(input);
+    return true;
   }
 
+  // ── Password validator (minimal 8 karakter) ────────────────────────────────
   function validatePassword(input, error) {
     const val = input.value;
-    if (!val) { showError(input, error, 'Password tidak boleh kosong.'); return false; }
-    if (val.length < 8) { showError(input, error, 'Password minimal 8 karakter.'); return false; }
-    clearError(input, error); markSuccess(input); return true;
+    if (!val) {
+      showError(input, error, 'Password tidak boleh kosong.');
+      return false;
+    }
+    if (val.length < 8) {
+      showError(input, error, 'Password minimal 8 karakter.');
+      return false;
+    }
+    clearError(input, error);
+    markSuccess(input);
+    return true;
   }
 
-  // ── Init fields ─────────────────────────────────────────────────────────────
+  // ── Initialize form fields ──────────────────────────────────────────────────
   initEmailField(validateEmail);
 
+  // Initialize username field
   const usernameInput = $('username');
   const usernameError = $('usernameError');
   if (usernameInput && usernameError) {
@@ -264,9 +254,10 @@ function initRegister() {
 
   initPasswordField(validatePassword);
   initPasswordToggle();
+  initPasswordStrengthMeter();
   initEnterKey(['email', 'username', 'password'], submitBtn);
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Form submit handler ─────────────────────────────────────────────────────
   submitBtn.addEventListener('click', () => {
     const emailInput = $('email');
     const usernameInput = $('username');
@@ -275,31 +266,32 @@ function initRegister() {
     const usernameError = $('usernameError');
     const passwordError = $('passwordError');
 
-    const ok1 = validateEmail(emailInput, emailError);
-    const ok2 = validateUsername(usernameInput, usernameError);
-    const ok3 = validatePassword(passwordInput, passwordError);
+    // Validate all fields
+    const isEmailValid = validateEmail(emailInput, emailError);
+    const isUsernameValid = validateUsername(usernameInput, usernameError);
+    const isPasswordValid = validatePassword(passwordInput, passwordError);
 
-    if (!ok1 || !ok2 || !ok3) return;
+    if (!isEmailValid || !isUsernameValid || !isPasswordValid) return;
 
+    // Show loading state
     setLoading(submitBtn, btnLoader, true);
 
-    // Simulate async register — replace with real API call
+    // Simulate async register API call (replace with real API endpoint)
     setTimeout(() => {
       setLoading(submitBtn, btnLoader, false);
       showToast('✓  Registrasi berhasil! Silakan login.', 'success');
 
-      // Redirect to login after toast
-      setTimeout(() => { window.location.href = 'login.html'; }, 2800);
+      // Redirect to login page after successful registration
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2800);
     }, 1800);
   });
 }
 
 // =============================================================================
-// Bootstrap: detect page and initialise
+// Bootstrap
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  const page = document.title.trim().toLowerCase();
-
-  if (page === 'login') initLogin();
-  if (page === 'register') initRegister();
+  initRegister();
 });
