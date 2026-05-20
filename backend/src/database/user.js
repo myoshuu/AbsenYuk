@@ -166,20 +166,219 @@ const loginUser = async (req, res) => {
   }
 };
 
+// Fungsi untuk update data user, tipe akun, username, dan password masih dalam tahap pengembangan.
 const updateUser = async (req, res) => {
+  const { email, username, newEmail } = req.body;
 
+  if (!email) return res.status(400).json({
+    message: 'Email field tidak boleh kosong.',
+    statusCode: 400
+  });
+
+  if (!username && !newEmail) return res.status(400).json({
+    message: 'Minimal salah satu field (username atau newEmail) harus diisi.',
+    statusCode: 400
+  });
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cekAkun] = await connection.query('SELECT `id_user` FROM `tbl_user` WHERE `email` = ?', [email]);
+
+    if (cekAkun.length <= 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: 'Akun tidak ditemukan.',
+        statusCode: 404
+      });
+    }
+
+    const idUser = cekAkun[0].id_user;
+
+    if (newEmail) {
+      const [cekEmail] = await connection.query('SELECT `email` FROM `tbl_user` WHERE `email` = ? AND `email` != ?', [newEmail, email]);
+      if (cekEmail.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({
+          message: 'Email sudah terdaftar.',
+          statusCode: 409
+        });
+      }
+    }
+
+    if (username) {
+      await connection.query('UPDATE `tbl_user` SET `username` = ? WHERE `id_user` = ?', [username, idUser]);
+    }
+
+    if (newEmail) {
+      await connection.query('UPDATE `tbl_user` SET `email` = ? WHERE `id_user` = ?', [newEmail, idUser]);
+    }
+
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Data user berhasil diperbarui.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+
+    return res.status(500).json({
+      message: 'Error internal server.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
 };
 
+// Fungsi untuk update tipe akun masih dalam tahap pengembangan.
 const updateTipeAkun = async (req, res) => {
+  const { email, tipeAkun } = req.body;
 
+  if (!email || !tipeAkun) return res.status(400).json({
+    message: 'Data field tidak boleh kosong.',
+    statusCode: 400
+  });
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cekAkun] = await connection.query('SELECT `id_user` FROM `tbl_user` WHERE `email` = ?', [email]);
+
+    if (cekAkun.length <= 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: 'Akun tidak ditemukan.',
+        statusCode: 404
+      });
+    }
+
+    const idUser = cekAkun[0].id_user;
+
+    await connection.query('UPDATE `tbl_user` SET `tipe_akun` = ? WHERE `id_user` = ?', [tipeAkun, idUser]);
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Tipe akun berhasil diperbarui.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+
+    return res.status(500).json({
+      message: 'Error internal server.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
 };
 
+// Fungsi untuk update username masih dalam tahap pengembangan.
 const changeUsername = async (req, res) => {
+  const { email, newUsername } = req.body;
 
+  if (!email || !newUsername) return res.status(400).json({
+    message: 'Data field tidak boleh kosong.',
+    statusCode: 400
+  });
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cekAkun] = await connection.query('SELECT `id_user` FROM `tbl_user` WHERE `email` = ?', [email]);
+
+    if (cekAkun.length <= 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: 'Akun tidak ditemukan.',
+        statusCode: 404
+      });
+    }
+
+    const idUser = cekAkun[0].id_user;
+
+    await connection.query('UPDATE `tbl_user` SET `username` = ? WHERE `id_user` = ?', [newUsername, idUser]);
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Username berhasil diubah.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+
+    return res.status(500).json({
+      message: 'Error internal server.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
 }
 
+// Fungsi untuk update password masih dalam tahap pengembangan.
 const changePassword = async (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
 
+  if (!email || !oldPassword || !newPassword) return res.status(400).json({
+    message: 'Data field tidak boleh kosong.',
+    statusCode: 400
+  });
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cekAkun] = await connection.query('SELECT `id_user`, `password_hash` FROM `tbl_user` WHERE `email` = ?', [email]);
+
+    if (cekAkun.length <= 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: 'Akun tidak ditemukan.',
+        statusCode: 404
+      });
+    }
+
+    const idUser = cekAkun[0].id_user;
+    const hashedPass = cekAkun[0].password_hash;
+    const checkPass = await bcrypt.compare(oldPassword, hashedPass);
+
+    if (!checkPass) {
+      await connection.rollback();
+      return res.status(401).json({
+        message: 'Password lama tidak sesuai.',
+        statusCode: 401
+      });
+    }
+
+    const newHashPassword = await bcrypt.hash(newPassword, 10);
+
+    await connection.query('UPDATE `tbl_user` SET `password_hash` = ? WHERE `id_user` = ?', [newHashPassword, idUser]);
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Password berhasil diubah.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+
+    return res.status(500).json({
+      message: 'Error internal server.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
 };
 
 const deleteUser = async (req, res) => {
