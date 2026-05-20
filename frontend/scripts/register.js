@@ -258,7 +258,7 @@ function initRegister() {
   initEnterKey(['email', 'username', 'password'], submitBtn);
 
   // ── Form submit handler ─────────────────────────────────────────────────────
-  submitBtn.addEventListener('click', () => {
+  submitBtn.addEventListener('click', async () => {
     const emailInput = $('email');
     const usernameInput = $('username');
     const passwordInput = $('password');
@@ -276,16 +276,47 @@ function initRegister() {
     // Show loading state
     setLoading(submitBtn, btnLoader, true);
 
-    // Simulate async register API call (replace with real API endpoint)
-    setTimeout(() => {
-      setLoading(submitBtn, btnLoader, false);
-      showToast('✓  Registrasi berhasil! Silakan login.', 'success');
+    try {
+      const response = await fetch(API_CONFIG.getRegisterUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: usernameInput.value.trim(),
+          email: emailInput.value.trim(),
+          password: passwordInput.value
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle error responses
+        if (response.status === 409) {
+          showToast('❌ Email sudah terdaftar. Gunakan email lain atau login.', 'error');
+        } else if (response.status === 400) {
+          showToast('❌ Semua field harus diisi.', 'error');
+        } else {
+          showToast(`❌ ${data.message || 'Terjadi kesalahan pada server.'}`, 'error');
+        }
+        setLoading(submitBtn, btnLoader, false);
+        return;
+      }
+
+      // Successful registration
+      showToast('✓ Registrasi berhasil! Silakan login.', 'success');
 
       // Redirect to login page after successful registration
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 2800);
-    }, 1800);
+      }, 1500);
+
+    } catch (error) {
+      console.error('Register error:', error);
+      showToast('❌ Gagal terhubung ke server. Pastikan server berjalan.', 'error');
+      setLoading(submitBtn, btnLoader, false);
+    }
   });
 }
 

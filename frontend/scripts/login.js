@@ -171,7 +171,7 @@ function initLogin() {
   initEnterKey(['email', 'password'], submitBtn);
 
   // ── Form submit handler ─────────────────────────────────────────────────────
-  submitBtn.addEventListener('click', () => {
+  submitBtn.addEventListener('click', async () => {
     const emailInput = $('email');
     const passwordInput = $('password');
     const emailError = $('emailError');
@@ -186,14 +186,49 @@ function initLogin() {
     // Show loading state
     setLoading(submitBtn, btnLoader, true);
 
-    // Simulate async login API call (replace with real API endpoint)
-    setTimeout(() => {
-      setLoading(submitBtn, btnLoader, false);
-      showToast('✓  Login berhasil! Selamat datang kembali.', 'success');
+    try {
+      const response = await fetch(API_CONFIG.getLoginUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: emailInput.value.trim(),
+          password: passwordInput.value
+        })
+      });
 
-      // TODO: Redirect to dashboard after successful login
-      // window.location.href = '/dashboard';
-    }, 1800);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle error responses
+        if (response.status === 404) {
+          showToast('❌ Email belum terdaftar. Silakan register terlebih dahulu.', 'error');
+        } else if (response.status === 401) {
+          showToast('❌ Email atau password salah.', 'error');
+        } else {
+          showToast(`❌ ${data.message || 'Terjadi kesalahan pada server.'}`, 'error');
+        }
+        setLoading(submitBtn, btnLoader, false);
+        return;
+      }
+
+      // Successful login
+      showToast('✓ Login berhasil! Selamat datang kembali.', 'success');
+      
+      // Store email in session/local storage for next page
+      sessionStorage.setItem('userEmail', emailInput.value.trim());
+      
+      // Redirect to home after successful login
+      setTimeout(() => {
+        window.location.href = '../homepage/index.html';
+      }, 1500);
+
+    } catch (error) {
+      console.error('Login error:', error);
+      showToast('❌ Gagal terhubung ke server. Pastikan server berjalan.', 'error');
+      setLoading(submitBtn, btnLoader, false);
+    }
   });
 }
 
