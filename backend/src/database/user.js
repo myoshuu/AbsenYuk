@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const db = require('./db');
 
 const getUserById = async (req, res) => {
@@ -75,8 +76,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const generatedId = crypto.randomUUID();
-    const idUser = generatedId.replace(/-/g, '').substring(0, 12);
+    const idUser = crypto.randomBytes(12).toString('hex').substring(0, 12);
 
     const hashPassword = await bcrypt.hash(password, 10);
 
@@ -119,7 +119,7 @@ const loginUser = async (req, res) => {
   try {
     // Cek apakah email tersebut sudah terdaftar.
     const [cekAkun] = await connection.query(
-      'SELECT `email`, `password_hash` FROM `tbl_user` WHERE `email` = ?',
+      'SELECT `id_user`, `username`, `email`, `password_hash`, `tipe_akun` FROM `tbl_user` WHERE `email` = ?',
       [email]
     );
 
@@ -146,10 +146,36 @@ const loginUser = async (req, res) => {
       });
     };
 
-    // Jika data benar berikan akses
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      await connection.rollback();
+      return res.status(500).json({
+        message: 'JWT secret belum diatur pada server.',
+        statusCode: 500
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id_user: cekAkun[0].id_user,
+        email: cekAkun[0].email,
+        role: cekAkun[0].tipe_akun
+      },
+      secret,
+      { expiresIn: '7d' }
+    );
+
     return res.status(200).json({
       message: 'Berhasil login. Redirecting...',
-      data: true,
+      data: {
+        token,
+        user: {
+          id_user: cekAkun[0].id_user,
+          username: cekAkun[0].username,
+          email: cekAkun[0].email,
+          tipe_akun: cekAkun[0].tipe_akun
+        }
+      },
       statusCode: 200
     });
 

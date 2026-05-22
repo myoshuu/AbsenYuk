@@ -10,12 +10,20 @@ const {
   changePassword,
   deleteUser
 } = require('../database/user');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
 // GET
 router.get('/', getAllUser)
 router.get('/:id_user', getUserById);
+router.get('/me/profile', authenticateToken, (req, res) => {
+  return res.status(200).json({
+    message: 'Data token valid.',
+    data: req.user,
+    statusCode: 200
+  });
+});
 
 // POST
 router.post('/register', registerUser);
