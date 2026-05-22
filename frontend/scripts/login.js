@@ -215,10 +215,14 @@ function initLogin() {
 
       // Successful login
       showToast('✓ Login berhasil! Selamat datang kembali.', 'success');
-      
+
+      if (data?.data?.token) {
+        localStorage.setItem('authToken', data.data.token);
+      }
+
       // Store email in session/local storage for next page
       sessionStorage.setItem('userEmail', emailInput.value.trim());
-      
+
       // Redirect to home after successful login
       setTimeout(() => {
         window.location.href = '../homepage/index.html';

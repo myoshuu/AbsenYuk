@@ -3,8 +3,8 @@
 /* ─── Hamburger / Mobile Drawer ────────────────────────── */
 (function initHamburger() {
   const hamburger = document.getElementById('hamburger');
-  const drawer    = document.getElementById('navDrawer');
-  const overlay   = document.getElementById('navOverlay');
+  const drawer = document.getElementById('navDrawer');
+  const overlay = document.getElementById('navOverlay');
   if (!hamburger || !drawer || !overlay) return;
 
   let isOpen = false;
@@ -54,4 +54,35 @@
       <span>Letakkan gambar laptop di<br><strong>images/hero.jpg</strong></span>`;
     wrap.replaceChild(ph, img);
   });
+})();
+
+/* ─── Auth CTA Toggle ───────────────────────────────────── */
+(function initAuthCta() {
+  const token = localStorage.getItem('authToken');
+  if (!token) return;
+
+  const navAuth = document.getElementById('navAuthLink');
+  const drawerAuth = document.getElementById('drawerAuthLink');
+  const heroAuth = document.getElementById('heroAuthLink');
+
+  const dashboardUrl = '#';
+
+  if (navAuth) {
+    navAuth.textContent = 'DASHBOARD';
+    navAuth.href = dashboardUrl;
+    navAuth.classList.add('nav-dashboard');
+  }
+
+  if (drawerAuth) {
+    drawerAuth.textContent = 'Dashboard';
+    drawerAuth.href = dashboardUrl;
+    drawerAuth.classList.add('drawer-dashboard');
+  }
+
+  if (heroAuth) {
+    heroAuth.textContent = 'Dashboard';
+    heroAuth.href = dashboardUrl;
+    heroAuth.classList.remove('btn-secondary');
+    heroAuth.classList.add('btn-dashboard');
+  }
 })();

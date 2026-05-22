@@ -96,6 +96,18 @@ img { display: block; max-width: 100%; }
   background: var(--accent-hover) !important;
 }
 
+.nav-dashboard {
+  background: var(--accent);
+  color: var(--white) !important;
+  border-radius: 4px;
+  padding: 9px 20px;
+  margin-left: 8px;
+  transition: background var(--t), transform var(--t);
+}
+.nav-dashboard:hover {
+  background: var(--accent-hover) !important;
+}
+
 /* Hamburger */
 .hamburger {
   display: none;
@@ -159,6 +171,15 @@ img { display: block; max-width: 100%; }
   border-radius: 6px;
 }
 .drawer-signup:hover { background: var(--accent-hover) !important; }
+
+.drawer-dashboard {
+  margin-top: 8px;
+  background: var(--accent);
+  color: var(--white) !important;
+  text-align: center;
+  border-radius: 6px;
+}
+.drawer-dashboard:hover { background: var(--accent-hover) !important; }
 
 .nav-overlay {
   position: fixed; inset: 0;
@@ -256,6 +277,15 @@ img { display: block; max-width: 100%; }
 }
 .btn-secondary:hover {
   background: var(--gray-hover);
+  transform: translateY(-1px);
+}
+
+.btn-dashboard {
+  background: var(--accent);
+  color: var(--white);
+}
+.btn-dashboard:hover {
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
