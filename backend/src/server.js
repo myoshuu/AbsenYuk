@@ -7,6 +7,9 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
 const userAPI = require('./api/user');
+const acaraAPI = require('./api/acara');
+const acaraIkutiAPI = require('./api/acara_ikuti');
+const absensiAPI = require('./api/absensi');
 
 const app = express();
 const PORT = process.env.APP_PORT || 3000;
@@ -22,7 +25,11 @@ app.get('/', (req, res) => {
   return res.json({ message: 'Hallo traveller! ' });
 });
 
+
 app.use('/api/user', userAPI);
+app.use('/api/acara', acaraAPI);
+app.use('/api/acara-ikuti', acaraIkutiAPI);
+app.use('/api/absensi', absensiAPI);
 
 
 app.use((err, req, res, next) => {
