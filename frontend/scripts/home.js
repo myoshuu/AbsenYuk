@@ -65,7 +65,7 @@
   const drawerAuth = document.getElementById('drawerAuthLink');
   const heroAuth = document.getElementById('heroAuthLink');
 
-  const dashboardUrl = '#';
+  const dashboardUrl = '../dashboard/index.html';
 
   if (navAuth) {
     navAuth.textContent = 'DASHBOARD';

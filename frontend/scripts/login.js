@@ -220,12 +220,26 @@ function initLogin() {
         localStorage.setItem('authToken', data.data.token);
       }
 
+      if (data?.data?.user) {
+        localStorage.setItem('authUser', JSON.stringify(data.data.user));
+      }
+
       // Store email in session/local storage for next page
       sessionStorage.setItem('userEmail', emailInput.value.trim());
 
-      // Redirect to home after successful login
+      const roleValue = data?.data?.user?.tipe_akun || '';
+      const role = roleValue.toString().toLowerCase();
+      const dashboardUrl = role === 'admin'
+        ? '../dashboard/admin/index.html'
+        : role === 'organizer'
+          ? '../dashboard/organizer/index.html'
+          : role === 'user'
+            ? '../dashboard/user/index.html'
+            : '../dashboard/index.html';
+
+      // Redirect to dashboard after successful login
       setTimeout(() => {
-        window.location.href = '../homepage/index.html';
+        window.location.href = dashboardUrl;
       }, 1500);
 
     } catch (error) {

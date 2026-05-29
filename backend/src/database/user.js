@@ -194,15 +194,15 @@ const loginUser = async (req, res) => {
 
 // Fungsi untuk update data user, tipe akun, username, dan password masih dalam tahap pengembangan.
 const updateUser = async (req, res) => {
-  const { email, username, newEmail } = req.body;
+  const { email, username, newEmail, password } = req.body;
 
   if (!email) return res.status(400).json({
     message: 'Email field tidak boleh kosong.',
     statusCode: 400
   });
 
-  if (!username && !newEmail) return res.status(400).json({
-    message: 'Minimal salah satu field (username atau newEmail) harus diisi.',
+  if (!username && !newEmail && !password) return res.status(400).json({
+    message: 'Minimal salah satu field (username, newEmail, atau password) harus diisi.',
     statusCode: 400
   });
 
@@ -239,6 +239,11 @@ const updateUser = async (req, res) => {
 
     if (newEmail) {
       await connection.query('UPDATE `tbl_user` SET `email` = ? WHERE `id_user` = ?', [newEmail, idUser]);
+    }
+
+    if (password) {
+      const newHashPassword = await bcrypt.hash(password, 10);
+      await connection.query('UPDATE `tbl_user` SET `password_hash` = ? WHERE `id_user` = ?', [newHashPassword, idUser]);
     }
 
     await connection.commit();
