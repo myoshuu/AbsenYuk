@@ -6,7 +6,7 @@ Backend Node.js + Express untuk manajemen user, acara, langganan acara (acara_ik
 Prasyarat
 - Node.js 18+ (disarankan LTS)
 - MySQL/MariaDB
-- Database berisi tabel: tbl_user, tbl_acara, tbl_acara_ikuti, tbl_absensi, tbl_detail_absensi, tbl_absensi_log
+- Database berisi tabel: tbl_user, tbl_acara, tbl_acara_ikuti, tbl_absensi, tbl_detail_absensi, tbl_absensi_log, tbl_acara_post, tbl_acara_post_komentar
 
 Konfigurasi Environment
 Buat file .env di folder backend dengan contoh berikut:
@@ -114,7 +114,124 @@ Daftar API Utama
 - PUT /api/acara-ikuti/update/:id_acara_ikuti
 - DELETE /api/acara-ikuti/delete/:id_acara_ikuti
 
-4) Absensi
+4) Acara Post
+- GET /api/acara-post/acara/:id_acara
+- POST /api/acara-post/acara/:id_acara (organizer/admin)
+- GET /api/acara-post/:id_post
+- PUT /api/acara-post/:id_post (owner/organizer/admin)
+- DELETE /api/acara-post/:id_post (owner/organizer/admin)
+- GET /api/acara-post/:id_post/komentar
+- POST /api/acara-post/:id_post/komentar
+- PUT /api/acara-post/komentar/:id_komentar (owner/organizer/admin)
+- DELETE /api/acara-post/komentar/:id_komentar (owner/organizer/admin)
+
+Catatan akses acara post:
+- Post hanya bisa dibuat oleh organizer event atau admin.
+- Komentar bisa dibuat oleh peserta terdaftar, organizer, atau admin.
+
+Contoh Post Acara
+
+1) Buat post
+```
+POST /api/acara-post/acara/1
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+	"judul": "Update teknis",
+	"konten": "Venue pindah ke Aula Timur."
+}
+```
+
+Response sukses:
+```
+{
+	"message": "Postingan berhasil dibuat",
+	"data": {
+		"id_post": 10
+	},
+	"statusCode": 201
+}
+```
+
+2) Ambil daftar post pada acara
+```
+GET /api/acara-post/acara/1
+Authorization: Bearer <token>
+```
+
+Response sukses:
+```
+{
+	"message": "Daftar postingan berhasil diambil",
+	"data": [
+		{
+			"id_post": 10,
+			"id_acara": 1,
+			"id_user": "96c983118ae2",
+			"username": "admin",
+			"email": "admin@absenyuk.id",
+			"judul": "Update teknis",
+			"konten": "Venue pindah ke Aula Timur.",
+			"dibuat_pada": "2026-05-30T10:00:00.000Z",
+			"diubah_pada": null
+		}
+	],
+	"statusCode": 200
+}
+```
+
+Contoh Komentar Post
+
+1) Tambah komentar
+```
+POST /api/acara-post/10/komentar
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+	"konten": "Siap, terima kasih infonya."
+}
+```
+
+Response sukses:
+```
+{
+	"message": "Komentar berhasil dibuat",
+	"data": {
+		"id_komentar": 5
+	},
+	"statusCode": 201
+}
+```
+
+2) Ambil komentar
+```
+GET /api/acara-post/10/komentar
+Authorization: Bearer <token>
+```
+
+Response sukses:
+```
+{
+	"message": "Daftar komentar berhasil diambil",
+	"data": [
+		{
+			"id_komentar": 5,
+			"id_post": 10,
+			"id_user": "3d63a5fe78dc",
+			"username": "test",
+			"email": "test@test.com",
+			"konten": "Siap, terima kasih infonya.",
+			"dibuat_pada": "2026-05-30T10:05:00.000Z",
+			"diubah_pada": null
+		}
+	],
+	"statusCode": 200
+}
+```
+
+5) Absensi
 - POST /api/absensi/create (organizer/admin)
 - GET /api/absensi/acara/:id_acara (organizer/admin)
 - GET /api/absensi/:id_absensi (organizer/admin)
