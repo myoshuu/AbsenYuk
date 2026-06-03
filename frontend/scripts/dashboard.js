@@ -115,9 +115,9 @@ function setLoading(isLoading) {
 }
 
 function showToast(message, type = 'info', duration = 2800) {
-  document.querySelectorAll('.toast').forEach((t) => t.remove());
+  document.querySelectorAll('.dashboard-toast').forEach((t) => t.remove());
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
+  toast.className = `dashboard-toast dashboard-toast-${type}`;
   toast.textContent = message;
   document.body.appendChild(toast);
 
