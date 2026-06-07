@@ -183,6 +183,10 @@ img { display: block; max-width: 100%; }
   max-width: var(--max-w);
   margin: 0 auto;
   padding: 64px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 80px;
   width: 100%;
 }
 

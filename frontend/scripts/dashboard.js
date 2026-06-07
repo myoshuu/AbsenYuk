@@ -58,15 +58,17 @@ const NAV_ITEMS = {
   admin: [
     { label: 'User Manajer', icon: 'users', path: 'dashboard/admin/user-manager.html' },
     { label: 'Acara', icon: 'calendar', path: 'dashboard/admin/acara.html' },
-    { label: 'Absensi', icon: 'check' }
+    { label: 'Absensi', icon: 'check' },
+    { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' }
   ],
   organizer: [
     { label: 'User Manajer', icon: 'users' },
     { label: 'Acara', icon: 'calendar' },
-    { label: 'Absensi', icon: 'check' }
+    { label: 'Absensi', icon: 'check' },
+    { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' }
   ],
   user: [
-    { label: 'Profile', icon: 'profile' },
+    { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' },
     { label: 'Acara Saya', icon: 'star' },
     { label: 'Setting', icon: 'settings' }
   ]
@@ -115,9 +117,9 @@ function setLoading(isLoading) {
 }
 
 function showToast(message, type = 'info', duration = 2800) {
-  document.querySelectorAll('.dashboard-toast').forEach((t) => t.remove());
+  document.querySelectorAll('.toast').forEach((t) => t.remove());
   const toast = document.createElement('div');
-  toast.className = `dashboard-toast dashboard-toast-${type}`;
+  toast.className = `toast toast-${type}`;
   toast.textContent = message;
   document.body.appendChild(toast);
 
@@ -230,6 +232,7 @@ function applyProfile(profile, viewRole, actualRole) {
   if (headerIcon) headerIcon.innerHTML = HEADER_ICONS[role] || '';
 
   buildNav(role);
+  updateAvatarDisplay(profile?.id_user);
 }
 
 function clearAuth() {
@@ -994,6 +997,162 @@ function initActions(actualRole) {
   }
 }
 
+/* AVATAR */
+function updateAvatarDisplay(id_user) {
+  if (!id_user) return;
+  var url = API_CONFIG.getProfilePictureUrl(id_user) + '?t=' + Date.now();
+  var html = '<img src="' + url + '" alt="" />';
+  var el = document.getElementById('sidebarAvatar');
+  if (el) el.innerHTML = html;
+  el = document.getElementById('profileAvatarLarge');
+  if (el) el.innerHTML = html;
+}
+
+function setupAvatarUpload(token, onSuccess) {
+  var fi = document.getElementById('avatarFileInput');
+  var btn = document.getElementById('changeAvatarBtn');
+  if (!fi || !btn) return;
+  btn.addEventListener('click', function () { fi.click(); });
+  fi.addEventListener('change', async function () {
+    var f = fi.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { showToast('Ukuran file maksimal 2MB.', 'error'); fi.value = ''; return; }
+    var fd = new FormData();
+    fd.append('avatar', f);
+    try {
+      var r = await fetch(API_CONFIG.getChangeAvatarUrl(), { method: 'PUT', headers: { Authorization: 'Bearer ' + token }, body: fd });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(d.message || 'Gagal mengupload.');
+      showToast('Foto profil berhasil diperbarui.', 'success');
+      if (onSuccess) onSuccess();
+    } catch (e) { showToast(e.message, 'error'); }
+    fi.value = '';
+  });
+}
+
+/* PROFILE MODALS */
+function openChangeUsernameModal(p, token, done) {
+  if (!p || !p.email || document.querySelector('.modal-overlay')) return;
+  var o = document.createElement('div'); o.className = 'modal-overlay';
+  o.innerHTML = '<div class="modal-card"><div class="modal-header"><h2 class="modal-title">Change Username</h2><p class="modal-subtitle">Masukkan email dan username baru.</p></div><form class="modal-form" id="cuForm"><div class="modal-field"><label class="modal-label">Email</label><input class="modal-input" type="email" value="' + p.email + '" readonly /></div><div class="modal-field"><label class="modal-label">Username Baru</label><input class="modal-input" id="cuUsername" type="text" placeholder="Username baru" required /></div><div class="modal-actions"><button class="modal-btn" type="button" data-cancel>Batalkan</button><button class="modal-btn primary" type="submit">Simpan</button></div></form></div>';
+  document.body.appendChild(o);
+  var kd = function (e) { if (e.key === 'Escape') closeModal(o, kd); };
+  document.addEventListener('keydown', kd);
+  o.addEventListener('click', function (e) { if (e.target === o) closeModal(o, kd); });
+  o.querySelector('[data-cancel]').addEventListener('click', function () { closeModal(o, kd); });
+  o.querySelector('#cuForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    try {
+      var r = await fetch(API_CONFIG.getChangeUsernameUrl(p.email), { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ email: p.email, newUsername: e.currentTarget.querySelector('#cuUsername').value.trim() }) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(d.message || 'Gagal.');
+      showToast('Username berhasil diubah.', 'success');
+      closeModal(o, kd);
+      if (done) done();
+    } catch (er) { showToast(er.message, 'error'); }
+  });
+}
+
+function openChangePasswordModal(p, token, done) {
+  if (!p || !p.email || document.querySelector('.modal-overlay')) return;
+  var o = document.createElement('div'); o.className = 'modal-overlay';
+  o.innerHTML = '<div class="modal-card"><div class="modal-header"><h2 class="modal-title">Change Password</h2><p class="modal-subtitle">Masukkan password sekarang dan password baru.</p></div><form class="modal-form" id="cpForm"><div class="modal-field"><label class="modal-label">Email</label><input class="modal-input" type="email" value="' + p.email + '" readonly /></div><div class="modal-field"><label class="modal-label">Password Sekarang</label><input class="modal-input" id="cpOld" type="password" placeholder="Password sekarang" required /></div><div class="modal-field"><label class="modal-label">Password Baru</label><input class="modal-input" id="cpNew" type="password" placeholder="Password baru" required /></div><div class="modal-actions"><button class="modal-btn" type="button" data-cancel>Batalkan</button><button class="modal-btn primary" type="submit">Simpan</button></div></form></div>';
+  document.body.appendChild(o);
+  var kd = function (e) { if (e.key === 'Escape') closeModal(o, kd); };
+  document.addEventListener('keydown', kd);
+  o.addEventListener('click', function (e) { if (e.target === o) closeModal(o, kd); });
+  o.querySelector('[data-cancel]').addEventListener('click', function () { closeModal(o, kd); });
+  o.querySelector('#cpForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var f = e.currentTarget;
+    try {
+      var r = await fetch(API_CONFIG.getChangePasswordUrl(p.email), { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ email: p.email, oldPassword: f.querySelector('#cpOld').value, newPassword: f.querySelector('#cpNew').value }) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(d.message || 'Gagal.');
+      showToast('Password berhasil diubah.', 'success');
+      closeModal(o, kd);
+    } catch (er) { showToast(er.message, 'error'); }
+  });
+}
+
+function openDeleteAccountModal(p, token) {
+  if (!p || !p.email || document.querySelector('.modal-overlay')) return;
+  var o = document.createElement('div'); o.className = 'modal-overlay';
+  o.innerHTML = '<div class="modal-card"><div class="modal-header"><h2 class="modal-title">Delete Account</h2><p class="modal-subtitle">Tindakan ini tidak dapat dibatalkan.</p></div><div class="modal-field"><label class="modal-label">Email</label><input class="modal-input" type="email" value="' + p.email + '" readonly /></div><div class="modal-actions"><button class="modal-btn" type="button" data-cancel>Batalkan</button><button class="modal-btn primary" type="button" data-confirm>Hapus</button></div></div>';
+  document.body.appendChild(o);
+  var kd = function (e) { if (e.key === 'Escape') closeModal(o, kd); };
+  document.addEventListener('keydown', kd);
+  o.addEventListener('click', function (e) { if (e.target === o) closeModal(o, kd); });
+  o.querySelector('[data-cancel]').addEventListener('click', function () { closeModal(o, kd); });
+  o.querySelector('[data-confirm]').addEventListener('click', async function () {
+    try {
+      var r = await fetch(API_CONFIG.getDeleteUserUrl(p.email), { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ email: p.email }) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(d.message || 'Gagal.');
+      showToast('Akun berhasil dihapus.', 'success');
+      closeModal(o, kd);
+      clearAuth();
+      setTimeout(function () { redirectToLogin(); }, 1200);
+    } catch (er) { showToast(er.message, 'error'); }
+  });
+}
+
+/* PROFILE INIT */
+async function initProfile(token) {
+  var dn = document.getElementById('profileDisplayName');
+  var di = document.getElementById('profileDisplayId');
+  var iu = document.getElementById('infoUsername');
+  var ie = document.getElementById('infoEmail');
+  var ir = document.getElementById('infoRole');
+  if (!dn && !iu) return;
+
+  async function loadProfile() {
+    try {
+      var r = await fetch(API_CONFIG.getProfileUrl(), { method: 'GET', headers: { Authorization: 'Bearer ' + token } });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(d.message || 'Gagal.');
+      var p = d.data || {};
+      var cu = safeParse(localStorage.getItem('authUser')) || {};
+      if (dn) dn.textContent = p.username || cu.username || '-';
+      if (di) di.textContent = 'id: ' + (p.id_user || '-');
+      if (iu) iu.textContent = p.username || '-';
+      if (ie) ie.textContent = p.email || '-';
+      if (ir) ir.textContent = ROLE_LABELS[normalizeRole(p.tipe_akun)] || '-';
+      localStorage.setItem('authUser', JSON.stringify({ username: p.username || cu.username, email: p.email || cu.email }));
+      return p;
+    } catch (e) { console.error(e); if (dn) dn.textContent = 'Error'; }
+    return {};
+  }
+
+  var profile = await loadProfile();
+  updateAvatarDisplay(profile.id_user);
+  setupAvatarUpload(token, function () { updateAvatarDisplay(profile.id_user); });
+  document.getElementById('changeUsernameBtn').addEventListener('click', function () { openChangeUsernameModal(profile, token, loadProfile); });
+  document.getElementById('changePasswordBtn').addEventListener('click', function () { openChangePasswordModal(profile, token, loadProfile); });
+  document.getElementById('deleteAccountBtn').addEventListener('click', function () { openDeleteAccountModal(profile, token); });
+}
+
+/* ADMIN SUMMARY */
+async function fetchAdminSummary(token) {
+  var r = await fetch(API_CONFIG.getDashboardSummaryUrl(), { method: 'GET', headers: { Authorization: 'Bearer ' + token } });
+  var d = await r.json().catch(function () { return {}; });
+  if (!r.ok) throw new Error(d.message || 'Gagal.');
+  return d.data || {};
+}
+
+async function initAdminSummary(token) {
+  var fields = ['totalUser', 'totalAcara', 'totalAbsensi', 'tingkatKehadiran'];
+  var has = fields.some(function (k) { return document.querySelector('[data-summary="' + k + '"]'); });
+  if (!has) return;
+  fields.forEach(function (k) { var el = document.querySelector('[data-summary="' + k + '"]'); if (el) el.textContent = '-'; });
+  try {
+    var s = await fetchAdminSummary(token);
+    fields.forEach(function (k) { var el = document.querySelector('[data-summary="' + k + '"]'); if (el) el.textContent = s[k] != null ? s[k] : 'Data Kosong'; });
+  } catch (e) {
+    fields.forEach(function (k) { var el = document.querySelector('[data-summary="' + k + '"]'); if (el) el.textContent = 'Data Kosong'; });
+  }
+}
+
 async function initDashboard() {
   const requiredRole = getRequiredRole();
   const token = localStorage.getItem('authToken');
@@ -1010,6 +1169,13 @@ async function initDashboard() {
     const previewRole = getPreviewRole();
 
     if (requiredRole === 'router') {
+      var isProfile = document.body && document.body.dataset && document.body.dataset.page === 'profile';
+      if (isProfile) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initProfile(token);
+        return;
+      }
       clearPreviewRole();
       window.location.href = getDashboardUrl(actualRole);
       return;
@@ -1031,6 +1197,7 @@ async function initDashboard() {
       clearPreviewRole();
       applyProfile(profile, 'admin', actualRole);
       initActions(actualRole);
+      await initAdminSummary(token);
       await initUserManager(actualRole, token);
       await initAcara(actualRole, token);
       return;
@@ -1058,6 +1225,52 @@ async function initDashboard() {
 document.addEventListener('DOMContentLoaded', () => {
   initDashboard();
 });
+
+/* ============================================================
+   DASHBOARD — Admin Summary
+============================================================ */
+
+async function fetchAdminSummary(token) {
+  const response = await fetch(API_CONFIG.getDashboardSummaryUrl(), {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Gagal mengambil ringkasan.');
+  }
+
+  return data?.data || {};
+}
+
+async function initAdminSummary(token) {
+  const fields = ['totalUser', 'totalAcara', 'totalAbsensi', 'tingkatKehadiran'];
+  const hasAnyField = fields.some((key) => document.querySelector(`[data-summary="${key}"]`));
+  if (!hasAnyField) return;
+
+  fields.forEach((key) => {
+    const el = document.querySelector(`[data-summary="${key}"]`);
+    if (el) el.textContent = '-';
+  });
+
+  try {
+    const summary = await fetchAdminSummary(token);
+    fields.forEach((key) => {
+      const el = document.querySelector(`[data-summary="${key}"]`);
+      if (el) {
+        el.textContent = summary[key] ?? 'Data Kosong';
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    fields.forEach((key) => {
+      const el = document.querySelector(`[data-summary="${key}"]`);
+      if (el) el.textContent = 'Data Kosong';
+    });
+  }
+}
 
 /* ============================================================
    ACARA — Konstanta

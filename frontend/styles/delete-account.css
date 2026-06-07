@@ -34,6 +34,10 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -46,13 +50,26 @@ body {
   z-index: 0;
 }
 
-/* ── Card wrapper (centered via Bootstrap flex utilities) ── */
+/* ── Container ─────────────────────────────────────────── */
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
 
 /* ── Card ──────────────────────────────────────────────── */
 .card {
   background: var(--white);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 400px;
+  padding: 44px 40px 38px;
   animation: fadeInUp 0.52s var(--ease) both;
 }
 
@@ -118,7 +135,12 @@ body {
   margin-bottom: 20px;
 }
 
-/* ── Input spacing handled by Bootstrap mb-3 ──────────── */
+/* ── Input ─────────────────────────────────────────────── */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 28px;
+}
 
 .label {
   font-size: 0.78rem;
@@ -181,6 +203,11 @@ body {
 }
 
 /* ── Buttons ───────────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 12px;
+}
+
 .btn {
   flex: 1;
   display: inline-flex;
@@ -341,5 +368,5 @@ body {
 
 @media (max-width: 360px) {
   .card { padding: 28px 18px 26px; }
-  .d-flex.gap-3 { flex-direction: column; }
+  .btn-row { flex-direction: column; }
 }

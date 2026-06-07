@@ -39,6 +39,11 @@ body {
   font-family: var(--font);
   background-color: var(--bg);
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
   position: relative;
 }
 
@@ -52,8 +57,18 @@ body {
 }
 
 /* ===========================
-   CARD WRAPPER (centered via Bootstrap flex utilities)
+   CONTAINER
 =========================== */
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
 
 /* ===========================
    REGISTER CARD
@@ -62,6 +77,9 @@ body {
   background: var(--card-bg);
   border-radius: var(--border-radius-card);
   box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 420px;
+  padding: 48px 44px 40px;
   animation: fadeInUp 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -108,7 +126,11 @@ body {
   flex-direction: column;
 }
 
-/* Input group spacing handled by Bootstrap mb-3 */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
 
 .label {
   font-size: 0.75rem;

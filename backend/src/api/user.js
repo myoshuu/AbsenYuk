@@ -8,22 +8,19 @@ const {
   updateTipeAkun,
   changeUsername,
   changePassword,
-  deleteUser
+  deleteUser,
+  getMyProfile
 } = require('../database/user');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { upload, multerErrorHandler, changeAvatar, serveAvatar } = require('../database/avatar');
 
 const router = express.Router();
 
 // GET
 router.get('/', getAllUser)
+router.get('/profile-picture/:id_user', serveAvatar);
+router.get('/me/profile', authenticateToken, getMyProfile);
 router.get('/:id_user', getUserById);
-router.get('/me/profile', authenticateToken, (req, res) => {
-  return res.status(200).json({
-    message: 'Data token valid.',
-    data: req.user,
-    statusCode: 200
-  });
-});
 
 // POST
 router.post('/register', registerUser);
@@ -34,6 +31,7 @@ router.put('/update/:email', authenticateToken, authorizeRoles('admin'), updateU
 router.put('/update-tipe-akun/:email', authenticateToken, authorizeRoles('admin'), updateTipeAkun);
 router.put('/change-username/:email', authenticateToken, changeUsername);
 router.put('/change-password/:email', authenticateToken, changePassword);
+router.put('/change-avatar', authenticateToken, upload.single('avatar'), multerErrorHandler, changeAvatar);
 
 // DELETE
 router.delete('/delete/:email', authenticateToken, deleteUser);

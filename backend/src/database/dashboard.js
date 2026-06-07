@@ -1,0 +1,23 @@
+const db = require('./db');
+
+const getAdminSummary = async (req, res) => {
+  const { id_user, role } = req.user || {};
+
+  if (!id_user) return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  if (role !== 'admin') return res.status(403).json({ message: 'Akses ditolak.', statusCode: 403 });
+
+  try {
+    const [[{ totalUser }]] = await db.query('SELECT COUNT(*) AS totalUser FROM tbl_user');
+    const [[{ totalAcara }]] = await db.query('SELECT COUNT(*) AS totalAcara FROM tbl_acara');
+    const [[{ totalAbsensi }]] = await db.query('SELECT COUNT(*) AS totalAbsensi FROM tbl_absensi');
+    const [[{ totalHadir }]] = await db.query("SELECT COUNT(*) AS totalHadir FROM tbl_absensi_log WHERE keterangan = 'hadir'");
+    const [[{ totalLog }]] = await db.query('SELECT COUNT(*) AS totalLog FROM tbl_absensi_log');
+    var tk = totalLog > 0 ? Math.round((totalHadir / totalLog) * 100) + '%' : 'Data Kosong';
+    return res.status(200).json({ message: 'Ringkasan sistem berhasil diambil', data: { totalUser: totalUser || 'Data Kosong', totalAcara: totalAcara || 'Data Kosong', totalAbsensi: totalAbsensi || 'Data Kosong', tingkatKehadiran: tk }, statusCode: 200 });
+  } catch (error) {
+    console.error('Error: ', error);
+    return res.status(500).json({ message: 'Error mengambil ringkasan sistem', statusCode: 500 });
+  }
+};
+
+module.exports = { getAdminSummary };

@@ -10,6 +10,7 @@ const userAPI = require('./api/user');
 const acaraAPI = require('./api/acara');
 const acaraIkutiAPI = require('./api/acara_ikuti');
 const acaraPostAPI = require('./api/acara_post');
+const dashboardAPI = require('./api/dashboard');
 const absensiAPI = require('./api/absensi');
 
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/user', userAPI);
 app.use('/api/acara', acaraAPI);
 app.use('/api/acara-ikuti', acaraIkutiAPI);
 app.use('/api/acara-post', acaraPostAPI);
+app.use('/api/dashboard', dashboardAPI);
 app.use('/api/absensi', absensiAPI);
 
 

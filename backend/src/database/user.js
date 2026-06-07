@@ -456,6 +456,19 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const getMyProfile = async (req, res) => {
+  const { id_user } = req.user || {};
+  if (!id_user) return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  try {
+    const [result] = await db.query('SELECT id_user, username, email, tipe_akun FROM tbl_user WHERE id_user = ?', [id_user]);
+    if (result.length === 0) return res.status(404).json({ message: 'User tidak ditemukan.', statusCode: 404 });
+    return res.status(200).json({ message: 'Profil berhasil diambil.', data: result[0], statusCode: 200 });
+  } catch (error) {
+    console.error('Error: ', error);
+    return res.status(500).json({ message: 'Error mengambil profil.', statusCode: 500 });
+  }
+};
+
 module.exports = {
   getUserById,
   getAllUser,
@@ -465,5 +478,6 @@ module.exports = {
   updateTipeAkun,
   changeUsername,
   changePassword,
-  deleteUser
+  deleteUser,
+  getMyProfile
 };

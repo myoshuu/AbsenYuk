@@ -25,6 +25,10 @@ const API_CONFIG = {
   USER_UPDATE_ENDPOINT: '/user/update',
   USER_ROLE_ENDPOINT: '/user/update-tipe-akun',
   USER_DELETE_ENDPOINT: '/user/delete',
+  USER_CHANGE_USERNAME_ENDPOINT: '/user/change-username',
+  USER_CHANGE_PASSWORD_ENDPOINT: '/user/change-password',
+  USER_CHANGE_AVATAR_ENDPOINT: '/user/change-avatar',
+  USER_PROFILE_PICTURE_ENDPOINT: '/user/profile-picture',
 
   // Get full login URL
   getLoginUrl() {
@@ -61,6 +65,26 @@ const API_CONFIG = {
     return `${this.API_BASE_URL + this.USER_DELETE_ENDPOINT}/${encodeURIComponent(email)}`;
   },
 
+  // Get full change username URL
+  getChangeUsernameUrl(email) {
+    return `${this.API_BASE_URL + this.USER_CHANGE_USERNAME_ENDPOINT}/${encodeURIComponent(email)}`;
+  },
+
+  // Get full change password URL
+  getChangePasswordUrl(email) {
+    return `${this.API_BASE_URL + this.USER_CHANGE_PASSWORD_ENDPOINT}/${encodeURIComponent(email)}`;
+  },
+
+  // Get full change avatar URL
+  getChangeAvatarUrl() {
+    return this.API_BASE_URL + this.USER_CHANGE_AVATAR_ENDPOINT;
+  },
+
+  // Get profile picture URL by user ID
+  getProfilePictureUrl(id_user) {
+    return `${this.API_BASE_URL + this.USER_PROFILE_PICTURE_ENDPOINT}/${id_user}`;
+  },
+
   /**
  * ============================================================
  * TAMBAHKAN blok ini ke dalam object API_CONFIG yang sudah ada
@@ -71,7 +95,7 @@ const API_CONFIG = {
  */
 
   // --- ACARA ---
-  ACARA_ENDPOINT:        '/acara',
+  ACARA_ENDPOINT: '/acara',
   ACARA_CREATE_ENDPOINT: '/acara/create',
   ACARA_UPDATE_ENDPOINT: '/acara/update',
   ACARA_STATUS_ENDPOINT: '/acara/update-status',
@@ -105,5 +129,12 @@ const API_CONFIG = {
   // Delete acara by id
   getDeleteAcaraUrl(id) {
     return `${this.API_BASE_URL}${this.ACARA_DELETE_ENDPOINT}/${id}`;
+  },
+
+  // --- DASHBOARD ---
+  DASHBOARD_SUMMARY_ENDPOINT: '/dashboard/summary',
+
+  getDashboardSummaryUrl() {
+    return this.API_BASE_URL + this.DASHBOARD_SUMMARY_ENDPOINT;
   }
 };

@@ -13,37 +13,37 @@
 
   <div class="bg-noise"></div>
 
-  <main class="min-vh-100 d-flex justify-content-center align-items-center p-3" style="position:relative;z-index:1;">
-    <div class="card border-0" style="max-width:400px;width:100%;">
+  <main class="container">
+    <div class="card">
 
       <!-- Header -->
-      <div class="card-header bg-transparent border-0 text-center pt-5 pb-0">
-        <h1 class="title h2 mb-3">HAPUS AKUN</h1>
-        <div class="title-bar mx-auto"></div>
+      <div class="card-header">
+        <h1 class="title">HAPUS AKUN</h1>
+        <div class="title-bar"></div>
       </div>
 
       <!-- Warning -->
-      <div class="warning-box mx-4">
-        <p class="warning-text mb-0">
+      <div class="warning-box">
+        <p class="warning-text">
           <span class="warning-bold">WARNING</span> akun akan dihapus secara permanen.
         </p>
       </div>
 
       <!-- Body -->
-      <div class="card-body px-4 pb-4 pt-3">
+      <div class="card-body">
 
         <p class="desc-text">
           Silahkan masukkan email untuk konfirmasi penghapusan akun.
         </p>
 
-        <div class="mb-3">
-          <label for="confirmEmail" class="form-label label text-uppercase">Konfirmasi Email</label>
-          <div class="position-relative">
+        <div class="input-group">
+          <label for="confirmEmail" class="label">Konfirmasi Email</label>
+          <div class="input-wrapper">
             <input
               type="email"
               id="confirmEmail"
               name="confirmEmail"
-              class="form-control input-field"
+              class="input-field"
               placeholder="contoh@email.com"
               autocomplete="email"
             />
@@ -52,9 +52,9 @@
         </div>
 
         <!-- Buttons -->
-        <div class="d-flex gap-3">
-          <button class="btn flex-fill btn-cancel fw-bold py-3" id="btnCancel" type="button">Batal</button>
-          <button class="btn flex-fill btn-delete fw-bold py-3" id="btnDelete" type="button">
+        <div class="btn-row">
+          <button class="btn btn-cancel" id="btnCancel" type="button">Batal</button>
+          <button class="btn btn-delete" id="btnDelete" type="button">
             <span class="btn-text">Hapus Akun</span>
             <span class="btn-loader" id="btnLoader" aria-hidden="true"></span>
           </button>
