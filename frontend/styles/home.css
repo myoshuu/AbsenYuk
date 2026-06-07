@@ -621,23 +621,7 @@ img { display: block; max-width: 100%; }
   flex: 1;
 }
 
-.feat-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  padding: 9px 24px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background: #d4e5d0;
-  color: #1f4a1a;
-  transition: background 0.2s ease, transform 0.2s ease;
-  margin-top: 6px;
-}
+
 
 .feat-btn:hover {
   background: #c2d8be;
