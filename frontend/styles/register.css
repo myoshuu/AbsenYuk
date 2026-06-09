@@ -1,4 +1,8 @@
 /* ===========================
+   REGISTER PAGE STYLESHEET
+=========================== */
+
+/* ===========================
    CSS Variables & Reset
 =========================== */
 *, *::before, *::after {
@@ -43,6 +47,41 @@ body {
   position: relative;
 }
 
+/* ── Utility Classes (replacing Bootstrap) ──────────────── */
+.min-vh-100 { min-height: 100vh; }
+.d-flex { display: flex; }
+.justify-content-center { justify-content: center; }
+.align-items-center { align-items: center; }
+.p-3 { padding: 1rem; }
+.px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.pb-4 { padding-bottom: 1.5rem; }
+.pt-3 { padding-top: 1rem; }
+.pt-5 { padding-top: 3rem; }
+.pb-0 { padding-bottom: 0; }
+.mb-3 { margin-bottom: 1rem; }
+.mt-3 { margin-top: 1rem; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.pe-3 { padding-right: 1rem; }
+.border-0 { border: none; }
+.bg-transparent { background: transparent; }
+.text-center { text-align: center; }
+.text-uppercase { text-transform: uppercase; }
+.position-relative { position: relative; }
+.position-absolute { position: absolute; }
+.top-50 { top: 50%; }
+.end-0 { right: 0; }
+.translate-middle-y { transform: translateY(-50%); }
+.form-label { display: block; }
+.form-control { 
+  width: 100%;
+  appearance: none;
+}
+.w-100 { width: 100%; }
+.py-3 { padding-top: 1rem; padding-bottom: 1rem; }
+.fw-bold { font-weight: 700; }
+.nav-link { display: inline-block; color: inherit; text-decoration: none; }
+.card { display: flex; flex-direction: column; }
+
 /* ── Noise texture ─────────────────────────────────── */
 .bg-noise {
   position: fixed;
@@ -53,7 +92,7 @@ body {
 }
 
 /* ===========================
-   Container
+   CONTAINER
 =========================== */
 .container {
   position: relative;
@@ -67,7 +106,7 @@ body {
 }
 
 /* ===========================
-   Card — Fade-in on load
+   REGISTER CARD
 =========================== */
 .card {
   background: var(--card-bg);
@@ -90,9 +129,7 @@ body {
   }
 }
 
-/* ===========================
-   Card Header
-=========================== */
+/* ───────────────────────── Card Header ────────────────────────── */
 .card-header {
   text-align: center;
   margin-bottom: 36px;
@@ -117,7 +154,7 @@ body {
 }
 
 /* ===========================
-   Card Body & Input Groups
+   FORM INPUTS
 =========================== */
 .card-body {
   display: flex;
@@ -168,7 +205,7 @@ body {
   font-size: 0.87rem;
 }
 
-/* Focus */
+/* Focus state */
 .input-field:focus {
   background: var(--input-focus-bg);
   border-color: var(--accent);
@@ -241,7 +278,7 @@ body {
 }
 
 /* ===========================
-   Password Strength Meter
+   PASSWORD STRENGTH METER
 =========================== */
 .strength-bar-wrap {
   height: 4px;
@@ -278,26 +315,7 @@ body {
 }
 
 /* ===========================
-   Forgot Password Link
-=========================== */
-.forgot-link {
-  display: inline-block;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  align-self: flex-end;
-  margin-top: -8px;
-  margin-bottom: 28px;
-  transition: color var(--transition);
-}
-
-.forgot-link:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-/* ===========================
-   Primary Button
+   REGISTER BUTTON
 =========================== */
 .btn-primary {
   width: 100%;
@@ -356,7 +374,7 @@ body {
   transform: none;
 }
 
-/* Spinner */
+/* Spinner loader */
 .btn-loader {
   display: none;
   width: 16px;
@@ -377,7 +395,7 @@ body {
 }
 
 /* ===========================
-   Bottom Text & Nav Link
+   NAVIGATION & FOOTER TEXT
 =========================== */
 .bottom-text {
   text-align: center;
@@ -399,7 +417,7 @@ body {
 }
 
 /* ===========================
-   Toast Notification
+   TOAST NOTIFICATION
 =========================== */
 .toast {
   position: fixed;
@@ -437,13 +455,14 @@ body {
 }
 
 /* ===========================
-   Responsive
+   RESPONSIVE DESIGN
 =========================== */
 @media (max-width: 480px) {
   .card {
     padding: 36px 28px 32px;
     border-radius: 22px;
   }
+
   .title {
     font-size: 1.75rem;
   }
@@ -453,6 +472,7 @@ body {
   .card {
     padding: 30px 20px 28px;
   }
+
   .title {
     font-size: 1.5rem;
   }

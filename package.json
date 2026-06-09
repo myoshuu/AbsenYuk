@@ -1,0 +1,9 @@
+{
+  "name": "absenyuk",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "serve:frontend": "cd frontend && npm run serve"
+  }
+}
