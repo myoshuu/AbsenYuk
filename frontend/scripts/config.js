@@ -9,7 +9,7 @@
 
 const API_CONFIG = {
   // Base URL untuk API backend
-  API_BASE_URL: 'http://localhost:5143/api',
+  API_BASE_URL: '/api',
 
   // Endpoint untuk login
   LOGIN_ENDPOINT: '/user/login',

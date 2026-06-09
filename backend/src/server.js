@@ -33,9 +33,17 @@ app.get('/absensi/isi', (req, res) => {
   res.sendFile(path.join(__dirname, '../../frontend/pages/dashboard/absensi/isi.html'));
 });
 
-app.get('/', (req, res) => {
-  return res.json({ message: 'Hallo traveller! ' });
-});
+// Production mode: serve homepage at root
+// Dev mode: return status message
+if (process.env.NODE_ENV === 'production') {
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../frontend/pages/homepage/index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    return res.json({ message: 'Hallo traveller! ' });
+  });
+}
 
 
 app.use('/api/user', userAPI);
