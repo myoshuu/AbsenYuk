@@ -66,9 +66,10 @@ const getPostsByAcara = async (req, res) => {
     );
 
     if (result.length === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         message: 'Belum ada postingan untuk acara ini',
-        statusCode: 404
+        data: [],
+        statusCode: 200
       });
     }
 
@@ -157,9 +158,9 @@ const createPost = async (req, res) => {
     });
   }
 
-  if (!id_acara || !konten) {
+  if (!id_acara || !judul || !konten) {
     return res.status(400).json({
-      message: 'id_acara dan konten wajib diisi',
+      message: 'Judul dan konten wajib diisi',
       statusCode: 400
     });
   }
@@ -181,8 +182,8 @@ const createPost = async (req, res) => {
       });
     }
 
-    const isOwner = acaraRows[0].id_user === id_user;
-    if (!isOwner && role !== 'admin') {
+    const access = await getEventAccess(acaraRows[0].id_acara, id_user, role, connection);
+    if (!access.allowed) {
       await connection.rollback();
       return res.status(403).json({
         message: 'Akses ditolak.',
@@ -193,7 +194,7 @@ const createPost = async (req, res) => {
     const [result] = await connection.query(
       `INSERT INTO tbl_acara_post (id_acara, id_user, judul, konten, dibuat_pada)
        VALUES (?, ?, ?, ?, NOW())`,
-      [id_acara, id_user, judul || null, konten]
+      [id_acara, id_user, judul, konten]
     );
 
     await connection.commit();

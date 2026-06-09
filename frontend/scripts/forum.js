@@ -69,7 +69,7 @@ async function initAcaraDetail(actualRole, token) {
 
     // Owner: show create post button
     if (forumCreateBtn) {
-      forumCreateBtn.style.display = isOwner ? '' : 'none';
+      forumCreateBtn.style.display = (isOwner || isParticipant) ? '' : 'none';
     }
 
     // Non-owner, non-participant: show join card
@@ -115,7 +115,7 @@ async function initAcaraDetail(actualRole, token) {
 
       forumPostsEl.innerHTML = '';
       if (posts.length === 0) {
-        setEmpty(forumEmptyEl, 'Belum ada diskusi. Mulailah diskusi pertama!', true);
+        setEmpty(forumEmptyEl, 'Belum ada diskusi.', true);
         return;
       }
       setEmpty(forumEmptyEl, '', false);
@@ -177,7 +177,7 @@ async function initAcaraDetail(actualRole, token) {
       });
     } catch (err) {
       console.error(err);
-      setEmpty(forumEmptyEl, 'Gagal memuat diskusi.', true);
+      setEmpty(forumEmptyEl, 'Diskusi kosong.', true);
     }
   }
 
@@ -229,11 +229,11 @@ async function initAcaraDetail(actualRole, token) {
           <form class="modal-form" id="createPostForm">
             <div class="modal-field">
               <label class="modal-label" for="modalPostJudul">Judul</label>
-              <input class="modal-input" id="modalPostJudul" type="text" placeholder="Judul diskusi (opsional)" />
+              <input class="modal-input" id="modalPostJudul" name="judul" type="text" placeholder="Judul diskusi" required />
             </div>
             <div class="modal-field">
               <label class="modal-label" for="modalPostKonten">Konten</label>
-              <textarea class="modal-input" id="modalPostKonten" placeholder="Tulis sesuatu..." style="resize:vertical;min-height:100px" required></textarea>
+              <textarea class="modal-input" id="modalPostKonten" name="konten" placeholder="Tulis sesuatu..." style="resize:vertical;min-height:100px" required></textarea>
             </div>
             <div class="modal-actions">
               <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>

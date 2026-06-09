@@ -230,14 +230,12 @@ function openDeleteModal(email, onConfirm) {
   });
 }
 
-async function fetchUsers(token) {
-  try {
-    const data = await api.get(API_CONFIG.getUsersUrl());
-    return Array.isArray(data.data) ? data.data : [];
-  } catch (err) {
-    if (err.status === 404) return [];
-    throw err;
-  }
+async function fetchUsers(page, limit, q) {
+  const params = { page, limit };
+  if (q) params.q = q;
+  const qs = new URLSearchParams(params);
+  const data = await api.get(API_CONFIG.getUsersUrl() + '?' + qs.toString());
+  return data;
 }
 
 function formatRole(value) {
@@ -250,6 +248,7 @@ function formatRole(value) {
 function buildUserCard(user) {
   const card = document.createElement('div');
   card.className = 'card user-card';
+  card.dataset.user = JSON.stringify(user);
 
   const userMain = document.createElement('div');
   userMain.className = 'user-main';
@@ -357,7 +356,8 @@ async function initUserManager(actualRole, token) {
   if (!listEl || !emptyEl || !paginationEl) return;
 
   const state = {
-    all: [],
+    data: [],
+    total: 0,
     search: '',
     page: 1
   };
@@ -365,14 +365,6 @@ async function initUserManager(actualRole, token) {
   function setEmpty(message, show) {
     emptyEl.textContent = message;
     emptyEl.classList.toggle('is-visible', show);
-  }
-
-  function applySearch() {
-    const term = state.search.toLowerCase();
-    return state.all.filter((user) => {
-      const email = (user.email || '').toLowerCase();
-      return email.includes(term);
-    });
   }
 
   function renderPagination(totalPages) {
@@ -403,86 +395,58 @@ async function initUserManager(actualRole, token) {
   }
 
   function renderList() {
-    const filtered = applySearch();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / USER_PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(state.total / USER_PAGE_SIZE));
 
     if (state.page > totalPages) {
       state.page = totalPages;
     }
 
-    const start = (state.page - 1) * USER_PAGE_SIZE;
-    const pageItems = filtered.slice(start, start + USER_PAGE_SIZE);
-
     listEl.innerHTML = '';
-    if (filtered.length === 0) {
+    if (state.data.length === 0) {
       setEmpty('Tidak ada data user.', true);
       paginationEl.innerHTML = '';
       return;
     }
 
     setEmpty('', false);
-    pageItems.forEach((user) => listEl.appendChild(buildUserCard(user)));
+    state.data.forEach((user) => listEl.appendChild(buildUserCard(user)));
     renderPagination(totalPages);
   }
 
   async function reloadUsers() {
     try {
-      state.all = await fetchUsers(token);
+      const res = await fetchUsers(state.page, USER_PAGE_SIZE, state.search);
+      state.data = Array.isArray(res.data) ? res.data : [];
+      state.total = res.total || 0;
       renderList();
     } catch (error) {
       console.error(error);
+      state.data = [];
+      state.total = 0;
       setEmpty('Gagal memuat data user.', true);
       showToast(error.message || 'Gagal memuat data user.', 'error');
     }
   }
 
-  async function handleDelete(email) {
-    if (!email) return;
-
-    await api.del(API_CONFIG.getDeleteUserUrl(email));
-    showToast('Akun berhasil dihapus.', 'success');
-  }
-
-  async function handleEdit(payload) {
-    const body = {
-      email: payload.email
-    };
-
-    if (payload.username) body.username = payload.username;
-    if (payload.newEmail && payload.newEmail !== payload.email) body.newEmail = payload.newEmail;
-    if (payload.password) body.password = payload.password;
-
-    if (!body.username && !body.newEmail && !body.password) {
-      showToast('Tidak ada perubahan yang disimpan.', 'info');
-      return;
-    }
-
-    await api.put(API_CONFIG.getUpdateUserUrl(payload.email), body);
-    showToast('Akun berhasil diperbarui.', 'success');
-  }
-
-  async function handleRoleChange(payload) {
-    await api.put(API_CONFIG.getUpdateRoleUrl(payload.email), { email: payload.email, tipeAkun: payload.tipeAkun });
-    showToast('Role akun diperbarui.', 'success');
-  }
-
+  // Event delegation for action buttons, search, pagination
   listEl.addEventListener('click', async (event) => {
     const btn = event.target.closest('button[data-user-action]');
     if (!btn) return;
 
     const action = btn.dataset.userAction;
     const email = btn.dataset.email;
-    const user = state.all.find((item) => item.email === email);
+    const card = btn.closest('.user-card');
+    const user = card ? JSON.parse(card.dataset.user || '{}') : {};
 
     try {
       if (action === 'delete') {
         openDeleteModal(email, async (confirmedEmail, close) => {
           try {
-            await handleDelete(confirmedEmail);
+            await api.del(API_CONFIG.getDeleteUserUrl(confirmedEmail));
+            showToast('Akun berhasil dihapus.', 'success');
             close();
             await reloadUsers();
           } catch (modalError) {
-            console.error(modalError);
             showToast(modalError.message || 'Gagal menghapus akun.', 'error');
           }
         });
@@ -491,11 +455,11 @@ async function initUserManager(actualRole, token) {
       if (action === 'edit') {
         openEditModal(user, async (payload, close) => {
           try {
-            await handleEdit(payload);
+            await api.put(API_CONFIG.getUpdateUserUrl(payload.email), payload);
+            showToast('Akun berhasil diperbarui.', 'success');
             close();
             await reloadUsers();
           } catch (modalError) {
-            console.error(modalError);
             showToast(modalError.message || 'Gagal memperbarui akun.', 'error');
           }
         });
@@ -504,11 +468,11 @@ async function initUserManager(actualRole, token) {
       if (action === 'role') {
         openRoleModal(user, async (payload, close) => {
           try {
-            await handleRoleChange(payload);
+            await api.put(API_CONFIG.getUpdateRoleUrl(payload.email), { email: payload.email, tipeAkun: payload.tipeAkun });
+            showToast('Role akun diperbarui.', 'success');
             close();
             await reloadUsers();
           } catch (modalError) {
-            console.error(modalError);
             showToast(modalError.message || 'Gagal mengubah role akun.', 'error');
           }
         });
@@ -516,7 +480,6 @@ async function initUserManager(actualRole, token) {
       }
       await reloadUsers();
     } catch (error) {
-      console.error(error);
       showToast(error.message || 'Aksi gagal dijalankan.', 'error');
     }
   });
@@ -527,14 +490,18 @@ async function initUserManager(actualRole, token) {
     const nextPage = Number(btn.dataset.page);
     if (Number.isNaN(nextPage)) return;
     state.page = nextPage;
-    renderList();
+    reloadUsers();
   });
 
   if (searchInput) {
+    let debounceTimer;
     searchInput.addEventListener('input', () => {
-      state.search = searchInput.value.trim();
-      state.page = 1;
-      renderList();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        state.search = searchInput.value.trim();
+        state.page = 1;
+        reloadUsers();
+      }, 300);
     });
   }
 
@@ -543,7 +510,7 @@ async function initUserManager(actualRole, token) {
       state.search = '';
       if (searchInput) searchInput.value = '';
       state.page = 1;
-      renderList();
+      reloadUsers();
     });
   }
 
@@ -557,7 +524,6 @@ async function initUserManager(actualRole, token) {
           close();
           await reloadUsers();
         } catch (modalError) {
-          console.error(modalError);
           showToast(modalError.message || 'Gagal membuat akun.', 'error');
         }
       });

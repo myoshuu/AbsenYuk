@@ -645,14 +645,18 @@ img { display: block; max-width: 100%; }
    ABOUT US
 ============================================================ */
 .about {
-  padding: 120px 0 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   min-height: 100vh;
+  padding: calc(64px + clamp(40px, 5vw, 80px)) 0 clamp(40px, 5vw, 80px);
   background: var(--white);
 }
 
 .about-inner {
   max-width: var(--max-w);
-  margin: 0 auto;
+  width: 100%;
   padding: 0 40px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -665,6 +669,19 @@ img { display: block; max-width: 100%; }
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 20px;
+  padding-top: 20px;
+  position: relative;
+}
+
+.about-title::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 3px;
+  background: var(--text-primary);
+  border-radius: 2px;
 }
 
 .about-desc {
@@ -687,6 +704,12 @@ img { display: block; max-width: 100%; }
   text-align: center;
   flex: 1;
   min-width: 100px;
+  transition: transform 0.32s var(--ease), box-shadow 0.32s var(--ease);
+}
+
+.about-stat:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
 }
 
 .about-stat-num {
@@ -706,6 +729,30 @@ img { display: block; max-width: 100%; }
   justify-content: center;
   align-items: center;
   color: var(--text-primary);
+}
+
+/* ─── about reveal ─── */
+.about-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.about.is-revealed .about-reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.about.is-revealed .about-desc.about-reveal {
+  transition-delay: 0.1s;
+}
+
+.about.is-revealed .about-cards.about-reveal {
+  transition-delay: 0.2s;
+}
+
+.about.is-revealed .about-visual.about-reveal {
+  transition-delay: 0.3s;
 }
 
 /* ============================================================
@@ -792,14 +839,16 @@ img { display: block; max-width: 100%; }
 }
 
 @media (max-width: 820px) {
+  .about { padding: calc(64px + 32px) 0 32px; }
   .about-inner { grid-template-columns: 1fr; gap: 40px; text-align: center; }
   .about-cards { justify-content: center; }
   .about-visual { order: -1; }
   .about-title { font-size: 1.8rem; }
+  .about-title::before { left: 50%; transform: translateX(-50%); }
 }
 
 @media (max-width: 600px) {
-  .about { padding: 100px 0 60px; }
+  .about { padding: calc(64px + 24px) 0 24px; }
   .about-inner { padding: 0 20px; }
   .team-inner { padding: 0 20px; }
   .team-card { width: 100%; max-width: 260px; }

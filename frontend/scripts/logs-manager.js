@@ -156,6 +156,7 @@ function openAddLogModal(acaraList, token, onSubmit) {
 async function initAbsensiLogs(actualRole, token) {
   const tableBody = document.getElementById('logsBody');
   const emptyEl = document.getElementById('logsEmpty');
+  const paginationEl = document.getElementById('logsPagination');
   const acaraFilter = document.getElementById('logsAcaraFilter');
   const statusFilter = document.getElementById('logsStatusFilter');
   const addBtn = document.getElementById('logsAddBtn');
@@ -166,6 +167,7 @@ async function initAbsensiLogs(actualRole, token) {
   let selectedAcaraId = '';
   let allLogs = [];
   let statusFilterValue = '';
+  let page = 1;
 
   function setEmpty(msg, show) {
     if (emptyEl) {
@@ -193,25 +195,61 @@ async function initAbsensiLogs(actualRole, token) {
     }
   }
 
+  function renderPagination(totalPages) {
+    if (!paginationEl) return;
+    paginationEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = `page-btn${page === 1 ? ' is-disabled' : ''}`;
+    prevBtn.textContent = '<';
+    prevBtn.dataset.page = String(page - 1);
+    prevBtn.disabled = page === 1;
+    paginationEl.appendChild(prevBtn);
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = `page-btn${i === page ? ' is-active' : ''}`;
+      btn.textContent = String(i);
+      btn.dataset.page = String(i);
+      paginationEl.appendChild(btn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = `page-btn${page === totalPages ? ' is-disabled' : ''}`;
+    nextBtn.textContent = '>';
+    nextBtn.dataset.page = String(page + 1);
+    nextBtn.disabled = page === totalPages;
+    paginationEl.appendChild(nextBtn);
+  }
+
   function renderLogs() {
     tableBody.innerHTML = '';
     const filtered = statusFilterValue
       ? allLogs.filter((l) => l.keterangan === statusFilterValue)
       : allLogs;
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / LOGS_PAGE_SIZE));
+    if (page > totalPages) page = totalPages;
+    const start = (page - 1) * LOGS_PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + LOGS_PAGE_SIZE);
+
     if (filtered.length === 0) {
       setEmpty('Tidak ada data absensi yang sesuai.', true);
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
     setEmpty('', false);
 
-    filtered.forEach((log) => {
+    pageItems.forEach((log, idx) => {
       const ket = log.keterangan || '-';
       const ketLabel = LOGS_STATUS_LABEL[ket] || ket.charAt(0).toUpperCase() + ket.slice(1);
       const tr = document.createElement('tr');
       tr.dataset.logId = log.id_absensi_log;
       tr.innerHTML = `
+        <td>${start + idx + 1}</td>
         <td>${log.username || log.id_user || '-'}</td>
+        <td>${log.judul_acara || '-'}</td>
         <td>${log.judul_absensi || '-'}</td>
         <td><span class="absensi-log-status absensi-log-${ket}">${ketLabel}</span></td>
         <td>${log.note || '-'}</td>
@@ -232,6 +270,7 @@ async function initAbsensiLogs(actualRole, token) {
         </td>`;
       tableBody.appendChild(tr);
     });
+    renderPagination(totalPages);
   }
 
   async function loadAcaraFilter() {
@@ -253,6 +292,7 @@ async function initAbsensiLogs(actualRole, token) {
       allLogs = [];
       statusFilterValue = '';
       if (statusFilter) statusFilter.value = '';
+      page = 1;
       loadLogs();
     });
   }
@@ -261,6 +301,19 @@ async function initAbsensiLogs(actualRole, token) {
   if (statusFilter) {
     statusFilter.addEventListener('change', () => {
       statusFilterValue = statusFilter.value;
+      page = 1;
+      renderLogs();
+    });
+  }
+
+  // Pagination
+  if (paginationEl) {
+    paginationEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-page]');
+      if (!btn || btn.disabled) return;
+      const next = Number(btn.dataset.page);
+      if (Number.isNaN(next)) return;
+      page = next;
       renderLogs();
     });
   }
@@ -276,9 +329,9 @@ async function initAbsensiLogs(actualRole, token) {
       const cells = tr.querySelectorAll('td');
       const logData = {
         id_absensi_log: logId,
-        username: cells[0]?.textContent || '',
+        username: cells[1]?.textContent || '',
         keterangan: tr.querySelector('.absensi-log-status')?.className.match(/absensi-log-(\S+)/)?.[1] || '',
-        note: cells[3]?.textContent || ''
+        note: cells[5]?.textContent || ''
       };
       if (logData.note === '-') logData.note = '';
 
@@ -329,6 +382,8 @@ async function initAbsensiLogs(actualRole, token) {
 
   const logsExportBtn = document.getElementById('logsExportBtn');
   if (logsExportBtn) {
+    if (actualRole !== 'admin') { logsExportBtn.style.display = 'none'; }
+    else {
     const updateLogsExportState = () => { logsExportBtn.disabled = !selectedAcaraId; };
     updateLogsExportState();
     logsExportBtn.addEventListener('click', (e) => {
@@ -348,7 +403,8 @@ async function initAbsensiLogs(actualRole, token) {
       });
     });
     if (acaraFilter) acaraFilter.addEventListener('change', updateLogsExportState);
-  }
+    } // end else admin
+  } // end if logsExportBtn
 
   setEmpty('Memuat data...', true);
   await loadAcaraFilter();

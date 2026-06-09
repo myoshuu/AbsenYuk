@@ -83,7 +83,18 @@ const getAcaraIkutiByUserId = async (req, res) => {
 
   try {
     const [result] = await db.query(
-      `SELECT a.*, u.username AS creator_name, i.tanggal_diikuti, i.id_acara_ikuti
+      `SELECT a.*, u.username AS creator_name, i.tanggal_diikuti, i.id_acara_ikuti,
+              EXISTS(SELECT 1 FROM tbl_absensi WHERE id_acara = a.id_acara) AS has_absensi,
+              (SELECT al.keterangan FROM tbl_absensi_log al
+               JOIN tbl_absensi ab2 ON ab2.id_absensi = al.id_absensi
+               WHERE ab2.id_acara = a.id_acara AND al.id_user = i.id_user
+               ORDER BY al.waktu_absen DESC LIMIT 1
+              ) AS absensi_keterangan,
+              (SELECT al.waktu_absen FROM tbl_absensi_log al
+               JOIN tbl_absensi ab2 ON ab2.id_absensi = al.id_absensi
+               WHERE ab2.id_acara = a.id_acara AND al.id_user = i.id_user
+               ORDER BY al.waktu_absen DESC LIMIT 1
+              ) AS absensi_waktu
        FROM tbl_acara_ikuti i
        JOIN tbl_acara a ON a.id_acara = i.id_acara
        JOIN tbl_user u ON u.id_user = a.id_user

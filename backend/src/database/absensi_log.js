@@ -281,9 +281,11 @@ const getLogsByAcara = async (req, res) => {
       `SELECT l.id_absensi_log, l.id_absensi, l.id_user,
               u.username, u.email,
               l.waktu_absen, l.keterangan, l.note,
-              a.judul AS judul_absensi
+              a.judul AS judul_absensi,
+              ac.judul AS judul_acara
        FROM tbl_absensi_log l
        JOIN tbl_absensi a ON a.id_absensi = l.id_absensi
+       JOIN tbl_acara ac ON ac.id_acara = a.id_acara
        JOIN tbl_user u ON u.id_user = l.id_user
        WHERE a.id_acara = ?
        ORDER BY l.waktu_absen DESC`,

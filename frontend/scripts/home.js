@@ -86,3 +86,20 @@
     heroAuth.classList.add('btn-dashboard');
   }
 })();
+
+/* ─── About Section Reveal ──────────────────────────────── */
+(function initAboutReveal() {
+  const about = document.querySelector('.about');
+  if (!about || typeof IntersectionObserver === 'undefined') return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        about.classList.add('is-revealed');
+        observer.unobserve(about);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  observer.observe(about);
+})();

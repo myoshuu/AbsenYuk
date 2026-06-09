@@ -2,12 +2,14 @@ const crypto = require('crypto');
 const db = require('./db');
 const { generateQrSvg } = require('../utils/qrcode');
 
-const getBaseUrl = () => {
-  return process.env.APP_BASE_URL || 'http://localhost:3000';
+const getBaseUrl = (req) => {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return `${protocol}://${host}`;
 };
 
-const buildAbsensiLink = (token) => {
-  return `${getBaseUrl()}/absensi/isi?token=${token}`;
+const buildAbsensiLink = (token, req) => {
+  return `${getBaseUrl(req)}/absensi/isi?token=${token}`;
 };
 
 const getAllAbsensiByAcara = async (req, res) => {
@@ -29,26 +31,32 @@ const getAllAbsensiByAcara = async (req, res) => {
   }
 
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const offset = (page - 1) * limit;
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM tbl_absensi a WHERE a.id_acara = ? AND a.id_user = ?`,
+      [id_acara, id_user]
+    );
+
     const [result] = await db.query(
       `SELECT a.id_absensi, a.id_acara, a.id_user, a.judul, a.status, a.dibuat_pada,
               d.id_detail_absensi, d.mulai_absen, d.akhir_absen, d.qr_token, d.qr_expires_at, d.status_qr
        FROM tbl_absensi a
        JOIN tbl_detail_absensi d ON d.id_absensi = a.id_absensi
        WHERE a.id_acara = ? AND a.id_user = ?
-       ORDER BY a.dibuat_pada DESC`,
-      [id_acara, id_user]
+       ORDER BY a.dibuat_pada DESC
+       LIMIT ? OFFSET ?`,
+      [id_acara, id_user, limit, offset]
     );
-
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Data absensi untuk acara ini kosong',
-        statusCode: 404
-      });
-    }
 
     return res.status(200).json({
       message: 'Daftar absensi berhasil diambil',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
@@ -195,7 +203,7 @@ const generateAbsensiLink = async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const linkUrl = buildAbsensiLink(token);
+  const linkUrl = buildAbsensiLink(token, req);
 
   const connection = await db.getConnection();
 
@@ -264,7 +272,7 @@ const generateAbsensiQr = async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const linkUrl = buildAbsensiLink(token);
+  const linkUrl = buildAbsensiLink(token, req);
   let qrSvg = null;
 
   try {

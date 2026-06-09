@@ -11,24 +11,39 @@ const getAllAcara = async (req, res) => {
   }
 
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 8));
+    const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+
+    let where = 'WHERE a.id_user = ?';
+    const params = [id_user];
+
+    if (status) {
+      where += ' AND a.status = ?';
+      params.push(status);
+    }
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM tbl_acara a ${where}`, params
+    );
+
     const [result] = await db.query(
       `SELECT a.*, u.username AS creator_name
        FROM tbl_acara a
        JOIN tbl_user u ON u.id_user = a.id_user
-       WHERE a.id_user = ?`,
-      [id_user]
+       ${where}
+       ORDER BY a.tanggal_mulai DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
-
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Data acara kosong',
-        statusCode: 404
-      });
-    }
 
     return res.status(200).json({
       message: 'Daftar acara berhasil diambil',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {

@@ -17,6 +17,7 @@ const exportAPI = require('./api/export');
 
 const app = express();
 const PORT = process.env.APP_PORT || 3000;
+app.enable('trust proxy');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

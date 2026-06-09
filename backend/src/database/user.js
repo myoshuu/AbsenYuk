@@ -32,22 +32,49 @@ const getUserById = async (req, res) => {
 
 const getAllUser = async (req, res) => {
   try {
-    const [result] = await db.query('SELECT * FROM `tbl_user`');
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const offset = (page - 1) * limit;
+    const q = req.query.q || '';
 
-    if (result.length <= 0) return res.status(404).json({
-      message: 'Table user kosong.',
-      data: null,
-      statusCode: 404
-    });
+    let where = '';
+    const params = [];
+    if (q) {
+      where = 'WHERE email LIKE ? OR username LIKE ?';
+      const pattern = `%${q}%`;
+      params.push(pattern, pattern);
+    }
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM tbl_user ${where}`, params
+    );
+
+    const [result] = await db.query(
+      `SELECT * FROM tbl_user ${where} ORDER BY id_user DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    if (result.length === 0 && page === 1) {
+      return res.status(404).json({
+        message: q ? 'Pencarian tidak ditemukan.' : 'Table user kosong.',
+        data: [],
+        total: 0,
+        page,
+        limit,
+        statusCode: 404
+      });
+    }
 
     return res.status(200).json({
       message: 'Data telah didapatkan.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
     console.error('Error: ', error);
-
     return res.status(500).json({
       message: 'Error internal server.',
       statusCode: 500

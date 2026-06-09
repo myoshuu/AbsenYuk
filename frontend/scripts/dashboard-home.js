@@ -198,3 +198,65 @@ async function initUserAcaraSaya(actualRole, token, id_user) {
     showToast(err.message || 'Gagal memuat acara.', 'error');
   }
 }
+
+/* USER HOME PAGE — events + absensi status */
+const STATUS_LABEL_MAP = {
+  hadir: { label: 'Hadir', cls: 'done', icon: '&#10003;' },
+  izin: { label: 'Izin', cls: 'pending', icon: '&#9990;' },
+  sakit: { label: 'Sakit', cls: 'pending', icon: '&#9745;' },
+  'tanpa keterangan': { label: 'Tanpa Keterangan', cls: 'pending', icon: '-' }
+};
+
+function getStatusConfig(acara) {
+  if (!acara.has_absensi) return { label: 'Belum Ada Absensi', cls: 'pending', icon: '∘' };
+  if (!acara.absensi_keterangan) return { label: 'Belum Absen', cls: 'pending', icon: '∘' };
+  return STATUS_LABEL_MAP[acara.absensi_keterangan] || { label: acara.absensi_keterangan, cls: 'pending', icon: '?' };
+}
+
+async function initUserHomepageEvents(actualRole, token, id_user) {
+  if (actualRole !== 'user') return;
+  const grid = document.getElementById('userEventGrid');
+  if (!grid) return;
+
+  try {
+    const data = await api.get(API_CONFIG.getAcaraIkutiByUserUrl(id_user));
+    const acaras = Array.isArray(data.data) ? data.data : [];
+
+    grid.innerHTML = '';
+    if (acaras.length === 0) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0">Belum mengikuti acara apapun.</p>';
+      return;
+    }
+
+    acaras.forEach((acara) => {
+      const cfg = getStatusConfig(acara);
+      const card = document.createElement('div');
+      card.className = 'card event-card';
+      card.style.cursor = 'pointer';
+      card.innerHTML = `
+        <div class="event-left">
+          <div class="event-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M7 3v4M17 3v4M3 10h18" />
+              <path d="M8 14h8" />
+            </svg>
+          </div>
+          <div class="event-info">
+            <p class="event-title">${acara.judul || 'Tanpa Judul'}</p>
+            <p class="event-meta">${formatDateTime(acara.tanggal_mulai) || '-'}</p>
+            <p class="event-location">${acara.lokasi || '-'}</p>
+          </div>
+        </div>
+        <span class="status-pill status-${cfg.cls}">${cfg.icon} ${cfg.label}</span>`;
+      card.addEventListener('click', () => {
+        window.location.href = buildPagesUrl(`dashboard/organizer/acara-detail.html?id=${acara.id_acara}`);
+      });
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0">Gagal memuat data.</p>';
+    showToast(err.message || 'Gagal memuat acara.', 'error');
+  }
+}

@@ -32,28 +32,6 @@ const PREVIEW_KEY = 'dashboardPreviewRole';
 const PREVIEW_ROLES = ['organizer', 'user'];
 const USER_PAGE_SIZE = 10;
 
-const HEADER_ICONS = {
-  admin: `
-    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
-      <path d="M7 10a4 4 0 108 0 4 4 0 00-8 0z" />
-      <path d="M4 20c1.8-3 4.5-4.5 8-4.5s6.2 1.5 8 4.5" />
-    </svg>
-  `,
-  organizer: `
-    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M7 3v4M17 3v4M3 10h18" />
-      <path d="M8 14h8" />
-    </svg>
-  `,
-  user: `
-    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c2.2-3.2 5-4.8 8-4.8s5.8 1.6 8 4.8" />
-    </svg>
-  `
-};
-
 const NAV_ITEMS = {
   admin: [
     { label: 'User Manajer', icon: 'users', path: 'dashboard/admin/user-manager.html' },
@@ -138,6 +116,8 @@ function buildNav(role) {
   const sideNav = $('#sideNav');
   if (!sideNav) return;
 
+  const currentPath = window.location.pathname.replace(/\\/g, '/').split('?')[0];
+
   sideNav.innerHTML = '';
   (NAV_ITEMS[role] || []).forEach((item) => {
     const isLink = Boolean(item.path);
@@ -147,6 +127,9 @@ function buildNav(role) {
     el.dataset.nav = item.label;
     if (isLink) {
       el.href = buildPagesUrl(item.path);
+      if (currentPath.endsWith(el.getAttribute('href'))) {
+        el.classList.add('is-active');
+      }
     }
     el.innerHTML = `
       <span class="side-icon">${ICONS[item.icon] || ''}</span>
@@ -209,13 +192,11 @@ function applyProfile(profile, viewRole, actualRole) {
   const profileRole = $('#profileRole');
   const welcomeTitle = $('#welcomeTitle');
   const welcomeSubtitle = $('#welcomeSubtitle');
-  const headerIcon = $('#headerIcon');
 
   if (profileName) profileName.textContent = `Hi, ${displayName}`;
   if (profileRole) profileRole.textContent = ROLE_LABELS[role] || 'Anggota';
   if (welcomeTitle) welcomeTitle.textContent = `Selamat Datang, ${ROLE_TITLES[role]}!`;
   if (welcomeSubtitle) welcomeSubtitle.textContent = ROLE_SUBTITLES[role] || 'Ini adalah Dashboard anda';
-  if (headerIcon) headerIcon.innerHTML = HEADER_ICONS[role] || '';
 
   buildNav(role);
   updateAvatarDisplay(profile?.id_user);
@@ -521,6 +502,9 @@ async function initDashboard() {
       initActions(actualRole);
       if (document.querySelector('[data-summary="totalAcara"]')) {
         await initOrganizerSummary(token);
+      }
+      if (document.getElementById('userEventGrid')) {
+        await initUserHomepageEvents(actualRole, token, profile.id_user);
       }
       return;
     }

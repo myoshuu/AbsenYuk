@@ -21,6 +21,7 @@ function buildAbsensiCard(absensi, index) {
   const card = document.createElement('div');
   card.className = 'card absensi-card';
   card.dataset.id = absensi.id_absensi || '';
+  card.dataset.absensi = JSON.stringify(absensi);
 
   card.innerHTML = `
     <div class="absensi-num">${index}</div>
@@ -107,12 +108,18 @@ function openCreateAbsensiModal(acaraList, onSubmit) {
           <input class="modal-input" id="ca_judul" name="judul" type="text" placeholder="Contoh: Sesi 1" required />
         </div>
         <div class="modal-field">
-          <label class="modal-label" for="ca_mulai">Mulai Absen</label>
-          <input class="modal-input" id="ca_mulai" name="mulai_absen" type="datetime-local" required />
+          <label class="modal-label">Mulai Absen</label>
+          <div style="display:flex;gap:8px">
+            <input class="modal-input" id="ca_mulai_date" name="mulai_absen" type="date" required style="flex:3;min-width:0" />
+            <input class="modal-input" id="ca_mulai_time" name="mulai_absen_time" type="time" required style="flex:2;min-width:0" />
+          </div>
         </div>
         <div class="modal-field">
-          <label class="modal-label" for="ca_akhir">Akhir Absen</label>
-          <input class="modal-input" id="ca_akhir" name="akhir_absen" type="datetime-local" required />
+          <label class="modal-label">Akhir Absen</label>
+          <div style="display:flex;gap:8px">
+            <input class="modal-input" id="ca_akhir_date" name="akhir_absen" type="date" required style="flex:3;min-width:0" />
+            <input class="modal-input" id="ca_akhir_time" name="akhir_absen_time" type="time" required style="flex:2;min-width:0" />
+          </div>
         </div>
         <div class="modal-actions">
           <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
@@ -131,7 +138,7 @@ function openCreateAbsensiModal(acaraList, onSubmit) {
     e.preventDefault();
     const f = e.currentTarget;
 
-    if (new Date(f.akhir_absen.value) <= new Date(f.mulai_absen.value)) {
+    if (new Date(f.akhir_absen.value + 'T' + f.akhir_absen_time.value) <= new Date(f.mulai_absen.value + 'T' + f.mulai_absen_time.value)) {
       showToast('Akhir absen harus setelah mulai absen.', 'error');
       return;
     }
@@ -139,8 +146,8 @@ function openCreateAbsensiModal(acaraList, onSubmit) {
     const payload = {
       id_acara: Number(f.id_acara.value),
       judul: f.judul.value.trim(),
-      mulai_absen: f.mulai_absen.value.replace('T', ' ') + ':00',
-      akhir_absen: f.akhir_absen.value.replace('T', ' ') + ':00'
+      mulai_absen: f.mulai_absen.value + ' ' + f.mulai_absen_time.value + ':00',
+      akhir_absen: f.akhir_absen.value + ' ' + f.akhir_absen_time.value + ':00'
     };
 
     onSubmit(payload, () => closeModal(overlay, onKeyDown));
@@ -294,18 +301,47 @@ function openAbsensiLogModal(logs, judul, id_absensi, token) {
 async function initAbsensi(actualRole, token) {
   const listEl = document.getElementById('absensiList');
   const emptyEl = document.getElementById('absensiEmpty');
+  const paginationEl = document.getElementById('absensiPagination');
   const acaraSelect = document.getElementById('absensiAcaraSelect');
   const createBtn = document.getElementById('absensiCreateBtn');
 
   if (!listEl || !emptyEl || !acaraSelect) return;
 
   let acaraList = [];
-  let absensiList = [];
   let selectedAcaraId = '';
+  const state = { data: [], total: 0, page: 1 };
 
   function setEmpty(message, show) {
     emptyEl.textContent = message;
     emptyEl.classList.toggle('is-visible', show);
+  }
+
+  function renderPagination(totalPages) {
+    if (!paginationEl) return;
+    paginationEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = `page-btn${state.page === 1 ? ' is-disabled' : ''}`;
+    prevBtn.textContent = '<';
+    prevBtn.dataset.page = String(state.page - 1);
+    prevBtn.disabled = state.page === 1;
+    paginationEl.appendChild(prevBtn);
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = `page-btn${i === state.page ? ' is-active' : ''}`;
+      btn.textContent = String(i);
+      btn.dataset.page = String(i);
+      paginationEl.appendChild(btn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = `page-btn${state.page === totalPages ? ' is-disabled' : ''}`;
+    nextBtn.textContent = '>';
+    nextBtn.dataset.page = String(state.page + 1);
+    nextBtn.disabled = state.page === totalPages;
+    paginationEl.appendChild(nextBtn);
   }
 
   function renderList() {
@@ -313,29 +349,35 @@ async function initAbsensi(actualRole, token) {
 
     if (!selectedAcaraId) {
       setEmpty('Pilih acara terlebih dahulu.', true);
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
 
-    if (absensiList.length === 0) {
+    if (state.data.length === 0) {
       setEmpty('Belum ada sesi absensi untuk acara ini.', true);
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
 
     setEmpty('', false);
-    absensiList.forEach((absensi, i) => {
-      listEl.appendChild(buildAbsensiCard(absensi, i + 1));
+    const start = (state.page - 1) * 10;
+    state.data.forEach((absensi, i) => {
+      listEl.appendChild(buildAbsensiCard(absensi, start + i + 1));
     });
+    renderPagination(Math.max(1, Math.ceil(state.total / 10)));
   }
 
   async function loadAbsensi(acaraId) {
     try {
       setEmpty('Memuat data absensi...', true);
       try {
-        const data = await api.get(API_CONFIG.getAbsensiByAcaraUrl(acaraId));
-        absensiList = Array.isArray(data.data) ? data.data : [];
+        const res = await api.get(API_CONFIG.getAbsensiByAcaraUrl(acaraId) + `?page=${state.page}&limit=10`);
+        state.data = Array.isArray(res.data) ? res.data : [];
+        state.total = res.total || 0;
       } catch (err) {
         if (err.status === 404) {
-          absensiList = [];
+          state.data = [];
+          state.total = 0;
         } else {
           throw err;
         }
@@ -344,7 +386,8 @@ async function initAbsensi(actualRole, token) {
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Gagal memuat data absensi.', 'error');
-      absensiList = [];
+      state.data = [];
+      state.total = 0;
       renderList();
     }
   }
@@ -369,13 +412,26 @@ async function initAbsensi(actualRole, token) {
 
   acaraSelect.addEventListener('change', () => {
     selectedAcaraId = acaraSelect.value;
+    state.page = 1;
     if (selectedAcaraId) {
       loadAbsensi(selectedAcaraId);
     } else {
-      absensiList = [];
+      state.data = [];
+      state.total = 0;
       renderList();
     }
   });
+
+  if (paginationEl) {
+    paginationEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-page]');
+      if (!btn || btn.disabled) return;
+      const next = Number(btn.dataset.page);
+      if (Number.isNaN(next)) return;
+      state.page = next;
+      loadAbsensi(selectedAcaraId);
+    });
+  }
 
   if (createBtn) {
     createBtn.addEventListener('click', () => {
@@ -398,6 +454,8 @@ async function initAbsensi(actualRole, token) {
 
   const absensiExportBtn = document.getElementById('absensiExportBtn');
   if (absensiExportBtn) {
+    if (actualRole !== 'admin') { absensiExportBtn.style.display = 'none'; }
+    else {
     const updateAbsensiExportState = () => {
       absensiExportBtn.disabled = !selectedAcaraId;
     };
@@ -418,16 +476,17 @@ async function initAbsensi(actualRole, token) {
       });
     });
     acaraSelect.addEventListener('change', updateAbsensiExportState);
-  }
+    } // end else admin
+  } // end if absensiExportBtn
 
-  /* ── Event: aksi pada card ── */
   listEl.addEventListener('click', async (event) => {
     const btn = event.target.closest('button[data-absensi-action]');
     if (!btn) return;
 
     const action = btn.dataset.absensiAction;
     const id = btn.dataset.id;
-    const absensi = absensiList.find((a) => String(a.id_absensi) === String(id));
+    const card = btn.closest('.absensi-card');
+    const absensi = card ? JSON.parse(card.dataset.absensi || '{}') : {};
 
     try {
       if (action === 'qr') {
