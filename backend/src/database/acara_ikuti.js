@@ -82,7 +82,15 @@ const getAcaraIkutiByUserId = async (req, res) => {
   }
 
   try {
-    const [result] = await db.query('SELECT * FROM tbl_acara_ikuti WHERE id_user = ?', [requesterId]);
+    const [result] = await db.query(
+      `SELECT a.*, u.username AS creator_name, i.tanggal_diikuti, i.id_acara_ikuti
+       FROM tbl_acara_ikuti i
+       JOIN tbl_acara a ON a.id_acara = i.id_acara
+       JOIN tbl_user u ON u.id_user = a.id_user
+       WHERE i.id_user = ?
+       ORDER BY i.tanggal_diikuti DESC`,
+      [requesterId]
+    );
 
     if (result.length === 0) {
       return res.status(404).json({

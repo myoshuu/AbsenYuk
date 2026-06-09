@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Manajer - Admin</title>
+  <title>Log Absensi - AbsenYuk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../../styles/dashboard.css" />
 </head>
-<body class="is-loading" data-role="admin">
+<body class="is-loading" data-role="router" data-page="absensi-logs">
   <div class="bg-noise"></div>
 
   <div class="loading-overlay" aria-live="polite">
@@ -29,13 +29,12 @@
           </svg>
         </div>
         <div class="profile-text">
-          <p class="profile-name" id="profileName">Hi, Admin</p>
-          <p class="profile-role" id="profileRole">Administrator</p>
+          <p class="profile-name" id="profileName">Hi, User</p>
+          <p class="profile-role" id="profileRole">Anggota</p>
         </div>
       </div>
 
       <div class="divider"></div>
-
       <nav class="side-nav" id="sideNav" aria-label="Menu dashboard"></nav>
 
       <div class="divider"></div>
@@ -44,9 +43,7 @@
         <button class="side-link" type="button" data-action="home">
           <span class="side-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M3 11l9-8 9 8" />
-              <path d="M5 10v10h14V10" />
-              <path d="M9 20v-6h6v6" />
+              <path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /><path d="M9 20v-6h6v6" />
             </svg>
           </span>
           <span>Home</span>
@@ -54,10 +51,7 @@
         <button class="side-link" type="button" data-action="exit">
           <span class="side-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M10 6h8v12h-8" />
-              <path d="M6 12h12" />
-              <path d="M6 12l3-3" />
-              <path d="M6 12l3 3" />
+              <path d="M10 6h8v12h-8" /><path d="M6 12h12" /><path d="M6 12l3-3" /><path d="M6 12l3 3" />
             </svg>
           </span>
           <span>Exit</span>
@@ -65,9 +59,7 @@
         <button class="side-link side-logout" type="button" data-action="logout">
           <span class="side-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M16 17l5-5-5-5" />
-              <path d="M21 12H9" />
-              <path d="M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2v-2" />
+              <path d="M16 17l5-5-5-5" /><path d="M21 12H9" /><path d="M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2v-2" />
             </svg>
           </span>
           <span>Log Out</span>
@@ -78,8 +70,8 @@
     <main class="main">
       <header class="main-header">
         <div>
-          <h1 class="welcome-title" id="welcomeTitle">User Manajer</h1>
-          <p class="welcome-subtitle" id="welcomeSubtitle">Kelola data akun, role, dan akses user.</p>
+          <h1 class="welcome-title" id="welcomeTitle">Log Absensi</h1>
+          <p class="welcome-subtitle" id="welcomeSubtitle">Kelola seluruh data kehadiran peserta.</p>
         </div>
         <div class="header-icon" id="headerIcon" aria-hidden="true"></div>
       </header>
@@ -88,27 +80,25 @@
 
       <section class="role-panel">
         <div class="section-header">
-          <h2 class="section-title">Daftar User</h2>
+          <h2 class="section-title">Riwayat Absensi</h2>
           <div class="user-search">
-            <label class="sr-only" for="userSearchInput">Cari email user</label>
-            <div class="user-search-box">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3.5-3.5" />
-              </svg>
-              <input id="userSearchInput" type="search" placeholder="Cari email user..." autocomplete="off" />
+            <div class="acara-filter-wrap">
+              <select id="logsAcaraFilter" class="acara-status-filter" style="max-width:240px">
+                <option value="">Semua Acara</option>
+              </select>
             </div>
-            <button class="user-search-clear" id="userSearchClear" type="button">Clear</button>
-            <button class="user-create" id="userCreateBtn" type="button" aria-label="Buat user">
-              <span class="user-create-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </span>
-            </button>
+            <div class="acara-filter-wrap">
+              <select id="logsStatusFilter" class="acara-status-filter" style="max-width:160px">
+                <option value="">Semua Status</option>
+                <option value="hadir">Hadir</option>
+                <option value="sakit">Sakit</option>
+                <option value="izin">Izin</option>
+                <option value="tanpa keterangan">Tanpa Keterangan</option>
+              </select>
+            </div>
+            <button class="user-create" id="logsAddBtn" type="button">Tambah Log</button>
             <div class="export-dropdown">
-              <button class="user-create export-btn" id="userExportBtn" type="button" aria-label="Export user">
+              <button class="user-create export-btn" id="logsExportBtn" type="button" disabled aria-label="Export log absensi" title="Pilih acara terlebih dahulu">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px">
                   <path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v3h16v-3"/>
                 </svg>
@@ -122,9 +112,27 @@
           </div>
         </div>
 
-        <div class="user-list" id="userList"></div>
-        <p class="user-empty" id="userEmpty">Tidak ada data user.</p>
-        <div class="pagination" id="userPagination"></div>
+        <div style="overflow-x:auto">
+          <table class="absensi-log-table logs-table-full" id="logsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Username</th>
+                <th>Acara</th>
+                <th>Absensi</th>
+                <th>Status</th>
+                <th>Catatan</th>
+                <th>Waktu</th>
+                <th style="width:80px">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="logsBody"></tbody>
+          </table>
+        </div>
+
+        <p class="user-empty" id="logsEmpty">Belum ada data absensi.</p>
+
+        <div class="pagination" id="logsPagination"></div>
       </section>
     </main>
   </div>

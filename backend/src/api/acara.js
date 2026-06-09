@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getAllAcara,
   getAcaraById,
+  getAcaraBrowse,
   createAcara,
   updateAcara,
   updateJudulAcara,
@@ -17,7 +18,8 @@ const router = express.Router();
 
 // GET
 router.get('/', authenticateToken, authorizeRoles('organizer', 'admin'), getAllAcara);
-router.get('/:id', authenticateToken, authorizeRoles('organizer', 'admin'), getAcaraById);
+router.get('/browse', authenticateToken, getAcaraBrowse);
+router.get('/:id', authenticateToken, getAcaraById);
 
 
 // POST

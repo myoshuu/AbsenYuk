@@ -90,7 +90,10 @@ const createAbsensiLog = async (req, res) => {
     }
 
     const [cekLog] = await connection.query(
-      'SELECT id_absensi_log FROM tbl_absensi_log WHERE id_absensi = ? AND id_user = ? LIMIT 1',
+      `SELECT id_absensi_log FROM tbl_absensi_log
+       WHERE id_absensi = ? AND id_user = ?
+       AND (note IS NULL OR note != 'Membuat absensi')
+       LIMIT 1`,
       [absensi.id_absensi, id_user]
     );
 
@@ -192,7 +195,244 @@ const getAbsensiLogsByAbsensi = async (req, res) => {
   }
 };
 
+const deleteAbsensiLog = async (req, res) => {
+  const { id_log } = req.params;
+  const { id_user, role } = req.user || {};
+
+  if (!id_user) {
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  }
+
+  if (!id_log) {
+    return res.status(400).json({ message: 'id_log wajib diisi', statusCode: 400 });
+  }
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [logResult] = await connection.query(
+      `SELECT l.id_absensi_log, l.id_absensi, a.id_user AS creator_id
+       FROM tbl_absensi_log l
+       JOIN tbl_absensi a ON a.id_absensi = l.id_absensi
+       WHERE l.id_absensi_log = ?`,
+      [id_log]
+    );
+
+    if (logResult.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Log absensi tidak ditemukan.', statusCode: 404 });
+    }
+
+    const log = logResult[0];
+
+    if (role !== 'admin' && log.creator_id !== id_user) {
+      await connection.rollback();
+      return res.status(403).json({ message: 'Akses ditolak.', statusCode: 403 });
+    }
+
+    await connection.query(
+      'DELETE FROM tbl_absensi_log WHERE id_absensi_log = ?',
+      [id_log]
+    );
+
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Log absensi berhasil dihapus.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+    return res.status(500).json({
+      message: 'Error menghapus log absensi.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
+};
+
+const getLogsByAcara = async (req, res) => {
+  const { id_acara } = req.params;
+  const { id_user, role } = req.user || {};
+
+  if (!id_user) {
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  }
+
+  if (!id_acara) {
+    return res.status(400).json({ message: 'id_acara wajib diisi.', statusCode: 400 });
+  }
+
+  try {
+    if (role !== 'admin') {
+      const [cek] = await db.query(
+        'SELECT id_acara FROM tbl_acara WHERE id_acara = ? AND id_user = ?',
+        [id_acara, id_user]
+      );
+      if (cek.length === 0) {
+        return res.status(404).json({ message: 'Acara tidak ditemukan.', statusCode: 404 });
+      }
+    }
+
+    const [result] = await db.query(
+      `SELECT l.id_absensi_log, l.id_absensi, l.id_user,
+              u.username, u.email,
+              l.waktu_absen, l.keterangan, l.note,
+              a.judul AS judul_absensi
+       FROM tbl_absensi_log l
+       JOIN tbl_absensi a ON a.id_absensi = l.id_absensi
+       JOIN tbl_user u ON u.id_user = l.id_user
+       WHERE a.id_acara = ?
+       ORDER BY l.waktu_absen DESC`,
+      [id_acara]
+    );
+
+    return res.status(200).json({
+      message: 'Data log absensi berhasil diambil.',
+      data: result,
+      statusCode: 200
+    });
+  } catch (error) {
+    console.error('Error: ', error);
+    return res.status(500).json({
+      message: 'Error mengambil data log absensi.',
+      statusCode: 500
+    });
+  }
+};
+
+const updateAbsensiLog = async (req, res) => {
+  const { id_log } = req.params;
+  const { keterangan, note } = req.body;
+  const { id_user, role } = req.user || {};
+
+  if (!id_user) {
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  }
+
+  if (!id_log) {
+    return res.status(400).json({ message: 'id_log wajib diisi.', statusCode: 400 });
+  }
+
+  if (!keterangan) {
+    return res.status(400).json({ message: 'keterangan wajib diisi.', statusCode: 400 });
+  }
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cek] = await connection.query(
+      `SELECT l.id_absensi_log, a.id_user AS creator_id
+       FROM tbl_absensi_log l
+       JOIN tbl_absensi a ON a.id_absensi = l.id_absensi
+       WHERE l.id_absensi_log = ?`,
+      [id_log]
+    );
+
+    if (cek.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Log absensi tidak ditemukan.', statusCode: 404 });
+    }
+
+    if (role !== 'admin' && cek[0].creator_id !== id_user) {
+      await connection.rollback();
+      return res.status(403).json({ message: 'Akses ditolak.', statusCode: 403 });
+    }
+
+    await connection.query(
+      'UPDATE tbl_absensi_log SET keterangan = ?, note = ? WHERE id_absensi_log = ?',
+      [keterangan, note || null, id_log]
+    );
+
+    await connection.commit();
+
+    return res.status(200).json({
+      message: 'Log absensi berhasil diperbarui.',
+      statusCode: 200
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+    return res.status(500).json({
+      message: 'Error memperbarui log absensi.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
+};
+
+const addAbsensiLog = async (req, res) => {
+  const { id_absensi, id_user_target, keterangan, note } = req.body;
+  const { id_user, role } = req.user || {};
+
+  if (!id_user) {
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  }
+
+  if (!id_absensi || !id_user_target || !keterangan) {
+    return res.status(400).json({
+      message: 'id_absensi, id_user_target, dan keterangan wajib diisi.',
+      statusCode: 400
+    });
+  }
+
+  if (role !== 'admin') {
+    const [cek] = await db.query(
+      'SELECT id_absensi FROM tbl_absensi WHERE id_absensi = ? AND id_user = ?',
+      [id_absensi, id_user]
+    );
+    if (cek.length === 0) {
+      return res.status(403).json({ message: 'Akses ditolak.', statusCode: 403 });
+    }
+  }
+
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    const [cekUser] = await connection.query(
+      'SELECT id_user FROM tbl_user WHERE id_user = ?',
+      [id_user_target]
+    );
+    if (cekUser.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'User tidak ditemukan.', statusCode: 404 });
+    }
+
+    const [result] = await connection.query(
+      'INSERT INTO tbl_absensi_log (id_absensi, id_user, waktu_absen, keterangan, note) VALUES (?, ?, NOW(), ?, ?)',
+      [id_absensi, id_user_target, keterangan, note || null]
+    );
+
+    await connection.commit();
+
+    return res.status(201).json({
+      message: 'Log absensi berhasil ditambahkan.',
+      data: { id_absensi_log: result.insertId },
+      statusCode: 201
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error: ', error);
+    return res.status(500).json({
+      message: 'Error menambahkan log absensi.',
+      statusCode: 500
+    });
+  } finally {
+    await connection.release();
+  }
+};
+
 module.exports = {
   createAbsensiLog,
-  getAbsensiLogsByAbsensi
+  getAbsensiLogsByAbsensi,
+  deleteAbsensiLog,
+  getLogsByAcara,
+  updateAbsensiLog,
+  addAbsensiLog
 };

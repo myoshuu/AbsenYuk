@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Isi Absensi - AbsenYuk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../../styles/absensi-isi.css" />
+</head>
+<body>
+  <div class="bg-noise"></div>
+  <div class="isi-card" id="isiCard">
+    <div class="isi-header">
+      <div class="isi-header-icon">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M9 12l2 2 4-4" />
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+        </svg>
+      </div>
+      <h1 class="isi-title" id="isiTitle">Isi Absensi</h1>
+      <p class="isi-subtitle" id="isiSubtitle">Konfirmasi kehadiran Anda</p>
+    </div>
+
+    <div id="isiContent">
+      <div id="isiInfo" class="isi-info" style="display:none">
+        <div class="isi-info-row">
+          <span class="isi-info-label">Username</span>
+          <span class="isi-info-value" id="isiUsername">-</span>
+        </div>
+        <div class="isi-info-row">
+          <span class="isi-info-label">Nama Acara</span>
+          <span class="isi-info-value" id="isiAcara">-</span>
+        </div>
+        <div class="isi-info-row">
+          <span class="isi-info-label">Absensi Berakhir</span>
+          <span class="isi-info-value" id="isiBerakhir">-</span>
+        </div>
+      </div>
+
+      <div id="isiForm" style="display:none">
+        <p style="font-weight:600;font-size:0.88rem;color:var(--muted);margin-bottom:12px">Pilih status kehadiran Anda</p>
+        <div class="isi-status-group">
+          <label class="isi-status-option" id="optHadir">
+            <input type="radio" name="keterangan" value="hadir" />
+            <span class="isi-status-dot" style="background:#2e7d32"></span>
+            Hadir
+          </label>
+          <label class="isi-status-option" id="optSakit">
+            <input type="radio" name="keterangan" value="sakit" />
+            <span class="isi-status-dot" style="background:#f57f17"></span>
+            Sakit
+          </label>
+          <label class="isi-status-option" id="optIzin">
+            <input type="radio" name="keterangan" value="izin" />
+            <span class="isi-status-dot" style="background:#1565c0"></span>
+            Izin
+          </label>
+          <label class="isi-status-option" id="optTanpa">
+            <input type="radio" name="keterangan" value="tanpa keterangan" />
+            <span class="isi-status-dot" style="background:#9e9e9e"></span>
+            Tanpa Ket.
+          </label>
+        </div>
+
+        <div class="isi-field">
+          <label for="isiNote">Catatan (opsional)</label>
+          <textarea id="isiNote" placeholder="Tambahkan catatan jika perlu..."></textarea>
+        </div>
+
+        <button class="isi-submit" id="isiSubmit" type="button">Kirim Absensi</button>
+      </div>
+    </div>
+
+    <div id="isiAlert" class="isi-alert" style="display:none"></div>
+
+    <p class="isi-footer" id="isiFooter">AbsenYuk &mdash; Sistem Absensi QR</p>
+  </div>
+
+  <script src="../../../scripts/config.js"></script>
+  <script src="../../../scripts/absensi-isi.js"></script>
+</body>
+</html>

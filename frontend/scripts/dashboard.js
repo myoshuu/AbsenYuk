@@ -58,19 +58,20 @@ const NAV_ITEMS = {
   admin: [
     { label: 'User Manajer', icon: 'users', path: 'dashboard/admin/user-manager.html' },
     { label: 'Acara', icon: 'calendar', path: 'dashboard/admin/acara.html' },
-    { label: 'Absensi', icon: 'check' },
+    { label: 'Absensi', icon: 'check', path: 'dashboard/absensi/index.html' },
+    { label: 'Log Absensi', icon: 'check', path: 'dashboard/absensi/logs.html' },
     { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' }
   ],
   organizer: [
-    { label: 'User Manajer', icon: 'users' },
-    { label: 'Acara', icon: 'calendar' },
-    { label: 'Absensi', icon: 'check' },
+    { label: 'Acara', icon: 'calendar', path: 'dashboard/organizer/acara.html' },
+    { label: 'Absensi', icon: 'check', path: 'dashboard/absensi/index.html' },
+    { label: 'Log Absensi', icon: 'check', path: 'dashboard/absensi/logs.html' },
     { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' }
   ],
   user: [
-    { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' },
-    { label: 'Acara Saya', icon: 'star' },
-    { label: 'Setting', icon: 'settings' }
+    { label: 'List Acara', icon: 'calendar', path: 'dashboard/user/acara-list.html' },
+    { label: 'Acara Saya', icon: 'star', path: 'dashboard/user/acara-saya.html' },
+    { label: 'Profile', icon: 'profile', path: 'dashboard/profile/index.html' }
   ]
 };
 
@@ -326,6 +327,56 @@ function openSwitchModal(actualRole) {
 function closeModal(overlay, onKeyDown) {
   overlay.remove();
   if (onKeyDown) document.removeEventListener('keydown', onKeyDown);
+}
+
+async function downloadExport(url, token, filename) {
+  try {
+    const resp = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.message || 'Gagal export data.');
+    }
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objUrl);
+  } catch (err) {
+    showToast(err.message || 'Gagal export data.', 'error');
+  }
+}
+
+function openConfirmModal(message, title = 'Konfirmasi') {
+  return new Promise((resolve) => {
+    if (document.querySelector('.modal-overlay')) { resolve(false); return; }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="modal-header">
+          <h2 class="modal-title">${title}</h2>
+        </div>
+        <div style="padding:8px 0 18px;font-size:0.95rem;line-height:1.5">${message}</div>
+        <div class="modal-actions">
+          <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
+          <button class="modal-btn primary" type="button" data-modal-confirm>Ya, Hapus</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    const onKeyDown = (e) => { if (e.key === 'Escape') { closeModal(overlay, onKeyDown); resolve(false); } };
+    document.addEventListener('keydown', onKeyDown);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { closeModal(overlay, onKeyDown); resolve(false); } });
+    overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => { closeModal(overlay, onKeyDown); resolve(false); });
+    overlay.querySelector('[data-modal-confirm]')?.addEventListener('click', () => { closeModal(overlay, onKeyDown); resolve(true); });
+  });
 }
 
 function openEditModal(user, onSubmit) {
@@ -955,6 +1006,24 @@ async function initUserManager(actualRole, token) {
     });
   }
 
+  const userExportBtn = document.getElementById('userExportBtn');
+  if (userExportBtn) {
+    userExportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = userExportBtn.parentElement.querySelector('.export-menu');
+      if (menu) menu.classList.toggle('is-open');
+    });
+    userExportBtn.parentElement.querySelectorAll('.export-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const format = opt.dataset.format;
+        const q = document.getElementById('userSearchInput')?.value?.trim() || '';
+        const filename = format === 'pdf' ? 'users.pdf' : 'users.xlsx';
+        downloadExport(API_CONFIG.getExportUsersUrl({ q }, format), token, filename);
+        opt.closest('.export-menu')?.classList.remove('is-open');
+      });
+    });
+  }
+
   setEmpty('Memuat data user...', true);
   await reloadUsers();
 }
@@ -978,9 +1047,6 @@ function initActions(actualRole) {
         clearPreviewRole();
         window.location.href = buildPagesUrl('homepage/index.html');
         return;
-      }
-      if (action === 'switch') {
-        openSwitchModal(actualRole);
       }
     });
   });
@@ -1176,6 +1242,55 @@ async function initDashboard() {
         await initProfile(token);
         return;
       }
+
+      var isAbsensi = document.body && document.body.dataset && document.body.dataset.page === 'absensi';
+      if (isAbsensi) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initAbsensi(actualRole, token);
+        return;
+      }
+
+      var isAbsensiLogs = document.body && document.body.dataset && document.body.dataset.page === 'absensi-logs';
+      if (isAbsensiLogs) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initAbsensiLogs(actualRole, token);
+        return;
+      }
+
+      var isOrgAcara = document.body && document.body.dataset && document.body.dataset.page === 'organizer-acara';
+      if (isOrgAcara) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initOrganizerAcara(actualRole, token);
+        return;
+      }
+
+      var isAcaraDetail = document.body && document.body.dataset && document.body.dataset.page === 'acara-detail';
+      if (isAcaraDetail) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initAcaraDetail(actualRole, token);
+        return;
+      }
+
+      var isUserAcaraList = document.body && document.body.dataset && document.body.dataset.page === 'user-acara-list';
+      if (isUserAcaraList) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initUserAcaraList(actualRole, token);
+        return;
+      }
+
+      var isUserAcaraSaya = document.body && document.body.dataset && document.body.dataset.page === 'user-acara-saya';
+      if (isUserAcaraSaya) {
+        applyProfile(profile, actualRole, actualRole);
+        initActions(actualRole);
+        await initUserAcaraSaya(actualRole, token);
+        return;
+      }
+
       clearPreviewRole();
       window.location.href = getDashboardUrl(actualRole);
       return;
@@ -1190,6 +1305,9 @@ async function initDashboard() {
 
       applyProfile(profile, actualRole, actualRole);
       initActions(actualRole);
+      if (document.querySelector('[data-summary="totalAcara"]')) {
+        await initOrganizerSummary(token);
+      }
       return;
     }
 
@@ -1224,6 +1342,14 @@ async function initDashboard() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initDashboard();
+});
+
+document.addEventListener('click', (event) => {
+  document.querySelectorAll('.export-menu.is-open').forEach((menu) => {
+    if (!event.target.closest('.export-dropdown')) {
+      menu.classList.remove('is-open');
+    }
+  });
 });
 
 /* ============================================================
@@ -1272,9 +1398,65 @@ async function initAdminSummary(token) {
   }
 }
 
-/* ============================================================
-   ACARA — Konstanta
-============================================================ */
+async function initOrganizerSummary(token) {
+  const fields = ['totalAcara', 'totalPeserta', 'totalAbsensi'];
+  try {
+    const resp = await fetch(API_CONFIG.getOrganizerSummaryUrl(), {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok) {
+      const summary = data.data || {};
+      fields.forEach((key) => {
+        const el = document.querySelector(`[data-summary="${key}"]`);
+        if (el) el.textContent = summary[key] ?? '-';
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Load agenda
+  const agendaList = document.getElementById('orgAgendaList');
+  const agendaEmpty = document.getElementById('orgAgendaEmpty');
+  if (!agendaList) return;
+
+  try {
+    const resp = await fetch(API_CONFIG.getAcaraUrl(), {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const d = await resp.json().catch(() => ({}));
+    const acaras = resp.ok ? (Array.isArray(d.data) ? d.data : []) : [];
+    if (agendaEmpty) {
+      agendaEmpty.classList.toggle('is-visible', acaras.length === 0);
+      agendaEmpty.textContent = 'Belum ada acara.';
+    }
+    acaras.slice(0, 4).forEach((acara) => {
+      const card = document.createElement('div');
+      card.className = 'card event-card';
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => {
+        window.location.href = buildPagesUrl(`dashboard/organizer/acara-detail.html?id=${acara.id_acara}`);
+      });
+      card.innerHTML = `
+        <div class="event-left">
+          <div class="event-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M7 3v4M17 3v4M3 10h18" />
+            </svg>
+          </div>
+          <div class="event-info">
+            <p class="event-title">${acara.judul || '-'}</p>
+            <p class="event-meta">${formatDateTime(acara.tanggal_mulai)}</p>
+            <p class="event-location">${acara.lokasi || '-'}</p>
+          </div>
+        </div>
+        <span class="status-pill status-${getAcaraStatus(acara)}">${ACARA_STATUS_LABEL[getAcaraStatus(acara)] || getAcaraStatus(acara)}</span>`;
+      agendaList.appendChild(card);
+    });
+  } catch (_) {}
+}
 
 const ACARA_PAGE_SIZE = 8;
 
@@ -1988,7 +2170,1428 @@ async function initAcara(actualRole, token) {
     });
   }
 
+  const acaraExportBtn = document.getElementById('acaraExportBtn');
+  if (acaraExportBtn) {
+    acaraExportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = acaraExportBtn.parentElement.querySelector('.export-menu');
+      if (menu) menu.classList.toggle('is-open');
+    });
+    acaraExportBtn.parentElement.querySelectorAll('.export-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const format = opt.dataset.format;
+        const status = document.getElementById('acaraStatusFilter')?.value || '';
+        const filename = format === 'pdf' ? 'acara.pdf' : 'acara.xlsx';
+        downloadExport(API_CONFIG.getExportAcaraUrl({ status }, format), token, filename);
+        opt.closest('.export-menu')?.classList.remove('is-open');
+      });
+    });
+  }
+
   /* ── Initial load ── */
   setEmpty('Memuat data acara...', true);
   await reloadAcara();
+}
+
+/* ============================================================
+   ABSENSI — Init
+============================================================ */
+
+const ABSENSI_STATUS_LABEL = {
+  pending: 'Menunggu',
+  dimulai: 'Dimulai',
+  berakhir: 'Berakhir'
+};
+
+const ABSENSI_QR_STATUS_LABEL = {
+  pending: 'Belum Aktif',
+  active: 'Aktif',
+  expired: 'Kadaluarsa'
+};
+
+function buildAbsensiCard(absensi, index) {
+  const status = absensi.status || 'pending';
+  const statusText = ABSENSI_STATUS_LABEL[status] || status;
+  const qrStatus = absensi.status_qr || 'pending';
+  const qrText = ABSENSI_QR_STATUS_LABEL[qrStatus] || qrStatus;
+
+  const card = document.createElement('div');
+  card.className = 'card absensi-card';
+  card.dataset.id = absensi.id_absensi || '';
+
+  card.innerHTML = `
+    <div class="absensi-num">${index}</div>
+    <div class="absensi-main">
+      <div class="absensi-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M9 12l2 2 4-4" />
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+        </svg>
+      </div>
+      <div class="absensi-meta">
+        <p class="absensi-title">${absensi.judul || 'Tanpa Judul'}</p>
+        <p class="absensi-date">${formatDateTime(absensi.mulai_absen)} &ndash; ${formatDateTime(absensi.akhir_absen)}</p>
+      </div>
+    </div>
+    <div class="absensi-detail">
+      <div class="absensi-badges">
+        <span class="absensi-status-badge absensi-status-${status}">${statusText}</span>
+        <span class="absensi-qr-badge absensi-qr-${qrStatus}">QR: ${qrText}</span>
+      </div>
+    </div>
+    <div class="absensi-actions user-actions">
+      <button class="icon-btn" type="button"
+              data-absensi-action="qr"
+              data-id="${absensi.id_absensi || ''}"
+              aria-label="Generate QR">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <path d="M10 3v18M3 10h18" stroke-dasharray="2 2" />
+        </svg>
+      </button>
+      <button class="icon-btn" type="button"
+              data-absensi-action="logs"
+              data-id="${absensi.id_absensi || ''}"
+              aria-label="Lihat log absensi">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h12" />
+        </svg>
+      </button>
+      <button class="icon-btn danger" type="button"
+              data-absensi-action="delete"
+              data-id="${absensi.id_absensi || ''}"
+              aria-label="Hapus absensi">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M3 6h18" />
+          <path d="M8 6V4h8v2" />
+          <path d="M10 10v6M14 10v6" />
+        </svg>
+      </button>
+    </div>
+  `;
+
+  return card;
+}
+
+function openCreateAbsensiModal(acaraList, onSubmit) {
+  if (document.querySelector('.modal-overlay')) return;
+
+  const acaraOptions = acaraList.map((a) =>
+    `<option value="${a.id_acara}">${a.judul}</option>`
+  ).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Buat absensi baru">
+      <div class="modal-header">
+        <h2 class="modal-title">Buat Absensi Baru</h2>
+        <p class="modal-subtitle">Isi detail sesi absensi untuk acara yang dipilih.</p>
+      </div>
+      <form class="modal-form" id="createAbsensiForm">
+        <div class="modal-field">
+          <label class="modal-label" for="ca_acara">Acara</label>
+          <select class="modal-select" id="ca_acara" name="id_acara" required>
+            <option value="">-- Pilih Acara --</option>
+            ${acaraOptions}
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="ca_judul">Judul Absensi</label>
+          <input class="modal-input" id="ca_judul" name="judul" type="text" placeholder="Contoh: Sesi 1" required />
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="ca_mulai">Mulai Absen</label>
+          <input class="modal-input" id="ca_mulai" name="mulai_absen" type="datetime-local" required />
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="ca_akhir">Akhir Absen</label>
+          <input class="modal-input" id="ca_akhir" name="akhir_absen" type="datetime-local" required />
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
+          <button class="modal-btn primary" type="submit">Buat Absensi</button>
+        </div>
+      </form>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+  document.addEventListener('keydown', onKeyDown);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+  overlay.querySelector('#createAbsensiForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.currentTarget;
+
+    if (new Date(f.akhir_absen.value) <= new Date(f.mulai_absen.value)) {
+      showToast('Akhir absen harus setelah mulai absen.', 'error');
+      return;
+    }
+
+    const payload = {
+      id_acara: Number(f.id_acara.value),
+      judul: f.judul.value.trim(),
+      mulai_absen: f.mulai_absen.value.replace('T', ' ') + ':00',
+      akhir_absen: f.akhir_absen.value.replace('T', ' ') + ':00'
+    };
+
+    onSubmit(payload, () => closeModal(overlay, onKeyDown));
+  });
+}
+
+function openAbsensiQrModal(qrData) {
+  if (document.querySelector('.modal-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="QR Code Absensi">
+      <div class="modal-header">
+        <h2 class="modal-title">QR Code Absensi</h2>
+        <p class="modal-subtitle">Scan QR atau bagikan link ke peserta.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;padding:18px 0">
+        <div class="qr-wrapper" style="width:200px;height:200px;border:2px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;background:#ffffff;padding:12px">
+          ${qrData.qr_svg || '<p style="color:var(--muted);font-size:0.85rem">QR tidak tersedia</p>'}
+        </div>
+        <div style="width:100%;display:grid;gap:8px">
+          <label class="modal-label" style="text-align:center;color:var(--muted)">Link Absensi</label>
+          <div style="display:flex;gap:8px">
+            <input class="modal-input" id="qrLinkInput" type="text" value="${qrData.qr_link || ''}" readonly
+                   style="flex:1;font-size:0.82rem" />
+            <button class="modal-btn primary" type="button" id="qrCopyBtn">Salin</button>
+          </div>
+          <p style="text-align:center;font-size:0.8rem;color:var(--muted)">
+            ${qrData.qr_expires_at ? 'Berlaku hingga: ' + formatDateTime(qrData.qr_expires_at) : ''}
+          </p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" type="button" data-modal-cancel>Tutup</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+  document.addEventListener('keydown', onKeyDown);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+  const copyBtn = overlay.querySelector('#qrCopyBtn');
+  const linkInput = overlay.querySelector('#qrLinkInput');
+  if (copyBtn && linkInput) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(linkInput.value);
+        copyBtn.textContent = 'Tersalin!';
+        setTimeout(() => { copyBtn.textContent = 'Salin'; }, 2000);
+      } catch (_) {
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        copyBtn.textContent = 'Tersalin!';
+        setTimeout(() => { copyBtn.textContent = 'Salin'; }, 2000);
+      }
+    });
+  }
+}
+
+function openAbsensiLogModal(logs, judul, id_absensi, token) {
+  if (document.querySelector('.modal-overlay')) return;
+
+  const logRows = (logs || []).map((log, i) => {
+    const ket = log.keterangan || '-';
+    const logId = log.id_absensi_log || '';
+    return `
+      <tr data-log-id="${logId}">
+        <td>${i + 1}</td>
+        <td>${log.username || log.id_user || '-'}</td>
+        <td><span class="absensi-log-status absensi-log-${ket}">${ket.charAt(0).toUpperCase() + ket.slice(1)}</span></td>
+        <td>${log.note || '-'}</td>
+        <td>${formatDateTime(log.waktu_absen)}</td>
+        <td>
+          <button class="absensi-log-delete" type="button"
+                  data-log-delete="${logId}"
+                  title="Hapus log absensi"
+                  aria-label="Hapus log absensi">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="M10 10v6M14 10v6" />
+            </svg>
+          </button>
+        </td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Belum ada data absensi.</td></tr>';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-label="Log absensi">
+      <div class="modal-header">
+        <h2 class="modal-title">Log Absensi</h2>
+        <p class="modal-subtitle">${judul || ''}</p>
+      </div>
+      <div style="overflow-x:auto;padding:4px 0">
+        <table class="absensi-log-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Peserta</th>
+              <th>Status</th>
+              <th>Catatan</th>
+              <th>Waktu</th>
+              <th style="width:48px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>${logRows}</tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" type="button" data-modal-cancel>Tutup</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+  document.addEventListener('keydown', onKeyDown);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+  overlay.querySelectorAll('[data-log-delete]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const logId = btn.dataset.logDelete;
+      if (!logId || !id_absensi || !token) return;
+
+      if (!await openConfirmModal('Hapus log absensi ini?')) return;
+
+      try {
+        const response = await fetch(API_CONFIG.getDeleteAbsensiLogUrl(id_absensi, logId), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Gagal menghapus log.');
+        showToast('Log absensi berhasil dihapus.', 'success');
+
+        const row = overlay.querySelector(`tr[data-log-id="${logId}"]`);
+        if (row) row.remove();
+        const remaining = overlay.querySelectorAll('tbody tr').length;
+        if (remaining === 0) {
+          overlay.querySelector('tbody').innerHTML =
+            '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Belum ada data absensi.</td></tr>';
+        }
+      } catch (err) {
+        showToast(err.message || 'Gagal menghapus log.', 'error');
+      }
+    });
+  });
+}
+
+async function initAbsensi(actualRole, token) {
+  const listEl = document.getElementById('absensiList');
+  const emptyEl = document.getElementById('absensiEmpty');
+  const acaraSelect = document.getElementById('absensiAcaraSelect');
+  const createBtn = document.getElementById('absensiCreateBtn');
+
+  if (!listEl || !emptyEl || !acaraSelect) return;
+
+  let acaraList = [];
+  let absensiList = [];
+  let selectedAcaraId = '';
+
+  function setEmpty(message, show) {
+    emptyEl.textContent = message;
+    emptyEl.classList.toggle('is-visible', show);
+  }
+
+  function renderList() {
+    listEl.innerHTML = '';
+
+    if (!selectedAcaraId) {
+      setEmpty('Pilih acara terlebih dahulu.', true);
+      return;
+    }
+
+    if (absensiList.length === 0) {
+      setEmpty('Belum ada sesi absensi untuk acara ini.', true);
+      return;
+    }
+
+    setEmpty('', false);
+    absensiList.forEach((absensi, i) => {
+      listEl.appendChild(buildAbsensiCard(absensi, i + 1));
+    });
+  }
+
+  async function loadAbsensi(acaraId) {
+    try {
+      setEmpty('Memuat data absensi...', true);
+      const response = await fetch(API_CONFIG.getAbsensiByAcaraUrl(acaraId), {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 404) {
+        absensiList = [];
+      } else if (!response.ok) {
+        throw new Error(data.message || 'Gagal memuat absensi.');
+      } else {
+        absensiList = Array.isArray(data.data) ? data.data : [];
+      }
+      renderList();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Gagal memuat data absensi.', 'error');
+      absensiList = [];
+      renderList();
+    }
+  }
+
+  async function loadAcara() {
+    try {
+      const response = await fetch(API_CONFIG.getAcaraUrl(), {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        acaraList = Array.isArray(data.data) ? data.data : [];
+      }
+
+      acaraSelect.innerHTML = '<option value="">-- Pilih Acara --</option>';
+      acaraList.forEach((a) => {
+        const opt = document.createElement('option');
+        opt.value = a.id_acara;
+        opt.textContent = a.judul;
+        acaraSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal memuat daftar acara.', 'error');
+    }
+  }
+
+  acaraSelect.addEventListener('change', () => {
+    selectedAcaraId = acaraSelect.value;
+    if (selectedAcaraId) {
+      loadAbsensi(selectedAcaraId);
+    } else {
+      absensiList = [];
+      renderList();
+    }
+  });
+
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      if (acaraList.length === 0) {
+        showToast('Tidak ada acara tersedia.', 'info');
+        return;
+      }
+      openCreateAbsensiModal(acaraList, async (payload, close) => {
+        try {
+          const response = await fetch(API_CONFIG.getCreateAbsensiUrl(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || 'Gagal membuat absensi.');
+          showToast('Absensi berhasil dibuat.', 'success');
+          close();
+          loadAbsensi(selectedAcaraId);
+        } catch (err) {
+          showToast(err.message || 'Gagal membuat absensi.', 'error');
+        }
+      });
+    });
+  }
+
+  const absensiExportBtn = document.getElementById('absensiExportBtn');
+  if (absensiExportBtn) {
+    const updateAbsensiExportState = () => {
+      absensiExportBtn.disabled = !selectedAcaraId;
+    };
+    updateAbsensiExportState();
+    absensiExportBtn.addEventListener('click', (e) => {
+      if (!selectedAcaraId) { showToast('Pilih acara terlebih dahulu.', 'info'); return; }
+      e.stopPropagation();
+      const menu = absensiExportBtn.parentElement.querySelector('.export-menu');
+      if (menu) menu.classList.toggle('is-open');
+    });
+    absensiExportBtn.parentElement.querySelectorAll('.export-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        if (!selectedAcaraId) { showToast('Pilih acara terlebih dahulu.', 'info'); return; }
+        const format = opt.dataset.format;
+        const filename = format === 'pdf' ? 'absensi.pdf' : 'absensi.xlsx';
+        downloadExport(API_CONFIG.getExportAbsensiUrl(selectedAcaraId, format), token, filename);
+        opt.closest('.export-menu')?.classList.remove('is-open');
+      });
+    });
+    acaraSelect.addEventListener('change', updateAbsensiExportState);
+  }
+
+  /* ── Event: aksi pada card ── */
+  listEl.addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-absensi-action]');
+    if (!btn) return;
+
+    const action = btn.dataset.absensiAction;
+    const id = btn.dataset.id;
+    const absensi = absensiList.find((a) => String(a.id_absensi) === String(id));
+
+    try {
+      if (action === 'qr') {
+        if (!absensi || absensi.status_qr === 'expired') {
+          showToast('QR sudah kadaluarsa. Generate ulang.', 'info');
+        }
+        const response = await fetch(API_CONFIG.getGenerateQrUrl(id), {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Gagal generate QR.');
+        openAbsensiQrModal(data.data || {});
+        loadAbsensi(selectedAcaraId);
+        return;
+      }
+
+      if (action === 'logs') {
+        const response = await fetch(API_CONFIG.getAbsensiLogsUrl(id), {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok && response.status !== 404) throw new Error(data.message || 'Gagal memuat log.');
+        const logs = response.status === 404 ? [] : (Array.isArray(data.data) ? data.data : []);
+        openAbsensiLogModal(logs, absensi?.judul || '', id, token);
+        return;
+      }
+
+      if (action === 'delete') {
+        if (!await openConfirmModal(`Hapus absensi "${absensi?.judul || ''}" beserta seluruh log-nya?`)) return;
+        const response = await fetch(API_CONFIG.getDeleteAbsensiUrl(id), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Gagal menghapus absensi.');
+        showToast('Absensi berhasil dihapus.', 'success');
+        loadAbsensi(selectedAcaraId);
+        return;
+      }
+    } catch (err) {
+      showToast(err.message || 'Aksi gagal.', 'error');
+    }
+  });
+
+  setEmpty('Memuat daftar acara...', true);
+  await loadAcara();
+  renderList();
+}
+
+/* ============================================================
+   ABSENSI LOGS — Full-Page Log Management
+============================================================ */
+
+const LOGS_PAGE_SIZE = 15;
+
+const LOGS_STATUS_LABEL = {
+  hadir: 'Hadir',
+  sakit: 'Sakit',
+  izin: 'Izin',
+  'tanpa keterangan': 'Tanpa Keterangan'
+};
+
+function openEditLogModal(logData, onSubmit) {
+  if (document.querySelector('.modal-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Edit log absensi">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Log Absensi</h2>
+        <p class="modal-subtitle">${logData.username || logData.id_user || ''}</p>
+      </div>
+      <form class="modal-form" id="editLogForm">
+        <div class="modal-field">
+          <label class="modal-label" for="elStatus">Status</label>
+          <select class="modal-select" id="elStatus" name="keterangan" required>
+            <option value="hadir" ${logData.keterangan === 'hadir' ? 'selected' : ''}>Hadir</option>
+            <option value="sakit" ${logData.keterangan === 'sakit' ? 'selected' : ''}>Sakit</option>
+            <option value="izin" ${logData.keterangan === 'izin' ? 'selected' : ''}>Izin</option>
+            <option value="tanpa keterangan" ${logData.keterangan === 'tanpa keterangan' ? 'selected' : ''}>Tanpa Keterangan</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="elNote">Catatan</label>
+          <textarea class="modal-input" id="elNote" name="note" placeholder="Catatan (opsional)" style="resize:vertical;min-height:60px">${logData.note || ''}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
+          <button class="modal-btn primary" type="submit">Simpan</button>
+        </div>
+      </form>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+  document.addEventListener('keydown', onKeyDown);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+  overlay.querySelector('#editLogForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.currentTarget;
+    onSubmit({
+      keterangan: f.keterangan.value,
+      note: f.note.value.trim() || null
+    }, () => closeModal(overlay, onKeyDown));
+  });
+}
+
+function openAddLogModal(acaraList, token, onSubmit) {
+  if (document.querySelector('.modal-overlay')) return;
+
+  const acaraOpts = acaraList.map((a) =>
+    `<option value="${a.id_acara}">${a.judul}</option>`
+  ).join('') || '<option value="">Tidak ada acara</option>';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Tambah log absensi">
+      <div class="modal-header">
+        <h2 class="modal-title">Tambah Log Absensi</h2>
+        <p class="modal-subtitle">Tambahkan kehadiran secara manual.</p>
+      </div>
+      <form class="modal-form" id="addLogForm">
+        <div class="modal-field">
+          <label class="modal-label" for="alAcara">Acara</label>
+          <select class="modal-select" id="alAcara" name="id_acara" required>
+            <option value="">-- Pilih Acara --</option>
+            ${acaraOpts}
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="alAbsensi">Absensi</label>
+          <select class="modal-select" id="alAbsensi" name="id_absensi" required>
+            <option value="">-- Pilih Acara Terlebih Dahulu --</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="alUser">ID User</label>
+          <input class="modal-input" id="alUser" name="id_user_target" type="text" placeholder="Masukkan ID user" required />
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="alStatus">Status</label>
+          <select class="modal-select" id="alStatus" name="keterangan" required>
+            <option value="">-- Pilih Status --</option>
+            <option value="hadir">Hadir</option>
+            <option value="sakit">Sakit</option>
+            <option value="izin">Izin</option>
+            <option value="tanpa keterangan">Tanpa Keterangan</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="alNote">Catatan</label>
+          <textarea class="modal-input" id="alNote" name="note" placeholder="Catatan (opsional)" style="resize:vertical;min-height:60px"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
+          <button class="modal-btn primary" type="submit">Tambah</button>
+        </div>
+      </form>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+  document.addEventListener('keydown', onKeyDown);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+  const acaraSelect = overlay.querySelector('#alAcara');
+  const absensiSelect = overlay.querySelector('#alAbsensi');
+
+  acaraSelect.addEventListener('change', async () => {
+    const idAcara = acaraSelect.value;
+    if (!idAcara) {
+      absensiSelect.innerHTML = '<option value="">-- Pilih Acara Terlebih Dahulu --</option>';
+      return;
+    }
+    absensiSelect.innerHTML = '<option value="">Memuat...</option>';
+    try {
+      const resp = await fetch(API_CONFIG.getAbsensiByAcaraUrl(idAcara), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      const list = resp.status === 404 ? [] : (Array.isArray(data.data) ? data.data : []);
+      absensiSelect.innerHTML = '<option value="">-- Pilih Absensi --</option>' +
+        list.map((a) => `<option value="${a.id_absensi}">${a.judul}</option>`).join('');
+    } catch (_) {
+      absensiSelect.innerHTML = '<option value="">Gagal memuat</option>';
+    }
+  });
+
+  overlay.querySelector('#addLogForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.currentTarget;
+    onSubmit({
+      id_absensi: Number(f.id_absensi.value),
+      id_user_target: f.id_user_target.value.trim(),
+      keterangan: f.keterangan.value,
+      note: f.note.value.trim() || null
+    }, () => closeModal(overlay, onKeyDown));
+  });
+}
+
+async function initAbsensiLogs(actualRole, token) {
+  const tableBody = document.getElementById('logsBody');
+  const emptyEl = document.getElementById('logsEmpty');
+  const acaraFilter = document.getElementById('logsAcaraFilter');
+  const statusFilter = document.getElementById('logsStatusFilter');
+  const addBtn = document.getElementById('logsAddBtn');
+
+  if (!tableBody) return;
+
+  let acaraList = [];
+  let selectedAcaraId = '';
+  let allLogs = [];
+  let statusFilterValue = '';
+
+  function setEmpty(msg, show) {
+    if (emptyEl) {
+      emptyEl.textContent = msg;
+      emptyEl.classList.toggle('is-visible', show);
+    }
+  }
+
+  async function loadLogs() {
+    if (!selectedAcaraId) {
+      tableBody.innerHTML = '';
+      setEmpty('Pilih acara terlebih dahulu.', true);
+      return;
+    }
+
+    try {
+      setEmpty('Memuat data...', true);
+      const resp = await fetch(API_CONFIG.getLogsByAcaraUrl(selectedAcaraId), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      const logs = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+      allLogs = logs;
+      renderLogs();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Gagal memuat log.', 'error');
+    }
+  }
+
+  function renderLogs() {
+    tableBody.innerHTML = '';
+    const filtered = statusFilterValue
+      ? allLogs.filter((l) => l.keterangan === statusFilterValue)
+      : allLogs;
+
+    if (filtered.length === 0) {
+      setEmpty('Tidak ada data absensi yang sesuai.', true);
+      return;
+    }
+    setEmpty('', false);
+
+    filtered.forEach((log) => {
+      const ket = log.keterangan || '-';
+      const ketLabel = LOGS_STATUS_LABEL[ket] || ket.charAt(0).toUpperCase() + ket.slice(1);
+      const tr = document.createElement('tr');
+      tr.dataset.logId = log.id_absensi_log;
+      tr.innerHTML = `
+        <td>${log.username || log.id_user || '-'}</td>
+        <td>${log.judul_absensi || '-'}</td>
+        <td><span class="absensi-log-status absensi-log-${ket}">${ketLabel}</span></td>
+        <td>${log.note || '-'}</td>
+        <td>${formatDateTime(log.waktu_absen)}</td>
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="absensi-log-delete" type="button" data-log-edit="${log.id_absensi_log}" title="Edit">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/>
+              </svg>
+            </button>
+            <button class="absensi-log-delete" type="button" data-log-delete="${log.id_absensi_log}" title="Hapus" style="color:#999">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 10v6M14 10v6"/>
+              </svg>
+            </button>
+          </div>
+        </td>`;
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function loadAcaraFilter() {
+    try {
+      const resp = await fetch(API_CONFIG.getAcaraUrl(), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) acaraList = Array.isArray(data.data) ? data.data : [];
+
+      if (acaraFilter) {
+        acaraFilter.innerHTML = '<option value="">-- Pilih Acara --</option>' +
+          acaraList.map((a) => `<option value="${a.id_acara}">${a.judul}</option>`).join('');
+      }
+    } catch (_) {}
+  }
+
+  // Acara filter event
+  if (acaraFilter) {
+    acaraFilter.addEventListener('change', () => {
+      selectedAcaraId = acaraFilter.value;
+      allLogs = [];
+      statusFilterValue = '';
+      if (statusFilter) statusFilter.value = '';
+      loadLogs();
+    });
+  }
+
+  // Status filter event
+  if (statusFilter) {
+    statusFilter.addEventListener('change', () => {
+      statusFilterValue = statusFilter.value;
+      renderLogs();
+    });
+  }
+
+  // Table actions: Edit / Delete
+  tableBody.addEventListener('click', async (e) => {
+    const editBtn = e.target.closest('[data-log-edit]');
+    const delBtn = e.target.closest('[data-log-delete]');
+
+    if (editBtn) {
+      const logId = editBtn.dataset.logEdit;
+      const tr = editBtn.closest('tr');
+      const cells = tr.querySelectorAll('td');
+      const logData = {
+        id_absensi_log: logId,
+        username: cells[0]?.textContent || '',
+        keterangan: tr.querySelector('.absensi-log-status')?.className.match(/absensi-log-(\S+)/)?.[1] || '',
+        note: cells[3]?.textContent || ''
+      };
+      if (logData.note === '-') logData.note = '';
+
+      openEditLogModal(logData, async (payload, close) => {
+        try {
+          const resp = await fetch(API_CONFIG.getUpdateAbsensiLogUrl(logId), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal mengupdate log.');
+          showToast('Log berhasil diperbarui.', 'success');
+          close();
+          loadLogs();
+        } catch (err) {
+          showToast(err.message || 'Gagal mengupdate log.', 'error');
+        }
+      });
+      return;
+    }
+
+    if (delBtn) {
+      if (!await openConfirmModal('Hapus log absensi ini?')) return;
+      try {
+        const resp = await fetch(API_CONFIG.getDeleteGlobalLogUrl(delBtn.dataset.logDelete), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(d.message || 'Gagal menghapus log.');
+        showToast('Log berhasil dihapus.', 'success');
+        loadLogs();
+      } catch (err) {
+        showToast(err.message || 'Gagal menghapus log.', 'error');
+      }
+    }
+  });
+
+  // Add button
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      if (acaraList.length === 0) {
+        showToast('Tidak ada acara tersedia.', 'info');
+        return;
+      }
+      openAddLogModal(acaraList, token, async (payload, close) => {
+        try {
+          const resp = await fetch(API_CONFIG.getAddAbsensiLogUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal menambah log.');
+          showToast('Log berhasil ditambahkan.', 'success');
+          close();
+          loadLogs();
+        } catch (err) {
+          showToast(err.message || 'Gagal menambah log.', 'error');
+        }
+      });
+    });
+  }
+
+  const logsExportBtn = document.getElementById('logsExportBtn');
+  if (logsExportBtn) {
+    const updateLogsExportState = () => { logsExportBtn.disabled = !selectedAcaraId; };
+    updateLogsExportState();
+    logsExportBtn.addEventListener('click', (e) => {
+      if (!selectedAcaraId) { showToast('Pilih acara terlebih dahulu.', 'info'); return; }
+      e.stopPropagation();
+      const menu = logsExportBtn.parentElement.querySelector('.export-menu');
+      if (menu) menu.classList.toggle('is-open');
+    });
+    logsExportBtn.parentElement.querySelectorAll('.export-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        if (!selectedAcaraId) { showToast('Pilih acara terlebih dahulu.', 'info'); return; }
+        const format = opt.dataset.format;
+        const status = statusFilter?.value || '';
+        const filename = format === 'pdf' ? 'logs_absensi.pdf' : 'logs_absensi.xlsx';
+        downloadExport(API_CONFIG.getExportLogsUrl(selectedAcaraId, { status }, format), token, filename);
+        opt.closest('.export-menu')?.classList.remove('is-open');
+      });
+    });
+    if (acaraFilter) acaraFilter.addEventListener('change', updateLogsExportState);
+  }
+
+  setEmpty('Memuat data...', true);
+  await loadAcaraFilter();
+  await loadLogs();
+
+}
+
+/* ============================================================
+   ORGANIZER ACARA — List Page
+============================================================ */
+
+async function initOrganizerAcara(actualRole, token) {
+  const listEl = document.getElementById('orgAcaraList');
+  const emptyEl = document.getElementById('orgAcaraEmpty');
+  const createBtn = document.getElementById('orgAcaraCreateBtn');
+
+  if (!listEl) return;
+
+  function setEmpty(msg, show) {
+    if (emptyEl) {
+      emptyEl.textContent = msg;
+      emptyEl.classList.toggle('is-visible', show);
+    }
+  }
+
+  async function loadAcara() {
+    try {
+      setEmpty('Memuat data...', true);
+      const resp = await fetch(API_CONFIG.getAcaraUrl(), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      const acaras = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+
+      listEl.innerHTML = '';
+      if (acaras.length === 0) {
+        setEmpty('Belum ada acara yang dibuat.', true);
+        return;
+      }
+      setEmpty('', false);
+
+      acaras.forEach((acara) => {
+        const card = document.createElement('div');
+        card.className = 'card org-acara-card';
+        card.dataset.id = acara.id_acara;
+        card.innerHTML = `
+          <div class="org-acara-card-top">
+            <h3 class="org-acara-judul">${acara.judul || 'Tanpa Judul'}</h3>
+            <span class="status-pill status-${getAcaraStatus(acara)}">${ACARA_STATUS_LABEL[getAcaraStatus(acara)] || getAcaraStatus(acara)}</span>
+          </div>
+          <p class="org-acara-meta">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>
+            ${formatDateTime(acara.tanggal_mulai)}
+          </p>
+          <p class="org-acara-creator">Dibuat oleh ${acara.creator_name || acara.id_user || '-'}</p>`;
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+          window.location.href = buildPagesUrl(`dashboard/organizer/acara-detail.html?id=${acara.id_acara}`);
+        });
+        listEl.appendChild(card);
+      });
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Gagal memuat acara.', 'error');
+      setEmpty('Gagal memuat data.', true);
+    }
+  }
+
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      openCreateAcaraModal(async (payload, close) => {
+        try {
+          const resp = await fetch(API_CONFIG.getCreateAcaraUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal membuat acara.');
+          showToast('Acara berhasil dibuat.', 'success');
+          close();
+          loadAcara();
+        } catch (err) {
+          showToast(err.message || 'Gagal membuat acara.', 'error');
+        }
+      });
+    });
+  }
+
+  await loadAcara();
+}
+
+/* ============================================================
+   ACARA DETAIL — Info + Forum Diskusi
+============================================================ */
+
+async function initAcaraDetail(actualRole, token) {
+  const params = new URLSearchParams(window.location.search);
+  const idAcara = params.get('id');
+
+  const titleEl = document.getElementById('acaraDetailTitle');
+  const subtitleEl = document.getElementById('acaraDetailSubtitle');
+  const bannerEl = document.getElementById('acaraDetailBanner');
+  const backBtn = document.getElementById('acaraDetailBack');
+  const joinCard = document.getElementById('acaraJoinCard');
+  const joinBtn = document.getElementById('acaraJoinBtn');
+  const forumSection = document.getElementById('forumSection');
+  const forumPostsEl = document.getElementById('forumPosts');
+  const forumEmptyEl = document.getElementById('forumEmpty');
+  const forumCreateBtn = document.getElementById('forumCreateBtn');
+
+  if (!idAcara || !bannerEl) {
+    if (titleEl) titleEl.textContent = 'ID Acara tidak ditemukan.';
+    return;
+  }
+
+  let acaraData = null;
+
+  // Back button
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      window.history.back();
+    });
+  }
+
+  function setEmpty(el, msg, show) {
+    if (el) { el.textContent = msg; el.classList.toggle('is-visible', show); }
+  }
+
+  async function loadAcara() {
+    try {
+      const resp = await fetch(API_CONFIG.getAcaraByIdUrl(idAcara), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.message || 'Gagal memuat acara.');
+      acaraData = data.data || {};
+      renderBanner();
+    } catch (err) {
+      console.error(err);
+      if (titleEl) titleEl.textContent = 'Gagal memuat acara.';
+      if (subtitleEl) subtitleEl.textContent = err.message;
+    }
+  }
+
+  function renderBanner() {
+    if (!acaraData) return;
+    const statusText = ACARA_STATUS_LABEL[getAcaraStatus(acaraData)] || getAcaraStatus(acaraData);
+    document.getElementById('detailJudul').textContent = acaraData.judul || '-';
+    document.getElementById('detailStatusBadge').className = `status-pill status-${getAcaraStatus(acaraData)}`;
+    document.getElementById('detailStatusBadge').textContent = statusText;
+    document.getElementById('detailCreator').textContent = acaraData.creator_name || acaraData.id_user || '-';
+    document.getElementById('detailLokasi').textContent = acaraData.lokasi || '-';
+    document.getElementById('detailMulai').textContent = formatDateTime(acaraData.tanggal_mulai);
+    document.getElementById('detailAkhir').textContent = formatDateTime(acaraData.tanggal_akhir);
+    document.getElementById('detailMaks').textContent = acaraData.maks_pengunjung ?? '-';
+    document.getElementById('detailPeserta').textContent = acaraData.peserta_ikut ?? '-';
+    bannerEl.style.display = 'block';
+    if (titleEl) titleEl.textContent = `Acara: ${acaraData.judul || ''}`;
+
+    const isOwner = acaraData.isOwner;
+    const isParticipant = acaraData.isParticipant;
+
+    // Owner: show create post button
+    if (forumCreateBtn) {
+      forumCreateBtn.style.display = isOwner ? '' : 'none';
+    }
+
+    // Non-owner, non-participant: show join card
+    if (joinCard) {
+      joinCard.style.display = isOwner ? 'none' : (isParticipant ? 'none' : 'block');
+    }
+
+    // Show forum only for owner or participant
+    if (forumSection) {
+      forumSection.style.display = (isOwner || isParticipant) ? 'block' : 'none';
+    }
+
+    // Join button handler
+    if (joinBtn && !isOwner && !isParticipant) {
+      joinBtn.addEventListener('click', async () => {
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Mengikuti...';
+        try {
+          const now = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          const fmt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          const resp = await fetch(API_CONFIG.getAcaraIkutiCreateUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              id_acara: Number(idAcara),
+              tanggal_mulai: acaraData.tanggal_mulai,
+              tanggal_diikuti: fmt
+            })
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal mengikuti acara.');
+          showToast('Berhasil mengikuti acara!', 'success');
+          // Reload page to show forum
+          setTimeout(() => window.location.reload(), 1200);
+        } catch (err) {
+          showToast(err.message || 'Gagal mengikuti acara.', 'error');
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Ikuti Acara';
+        }
+      });
+    }
+  }
+
+  async function loadPosts() {
+    try {
+      const resp = await fetch(API_CONFIG.getAcaraPostListUrl(idAcara), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      const posts = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+
+      forumPostsEl.innerHTML = '';
+      if (posts.length === 0) {
+        setEmpty(forumEmptyEl, 'Belum ada diskusi. Mulailah diskusi pertama!', true);
+        return;
+      }
+      setEmpty(forumEmptyEl, '', false);
+
+      for (const post of posts) {
+        const postEl = document.createElement('div');
+        postEl.className = 'forum-post-card';
+        postEl.dataset.postId = post.id_post;
+        postEl.innerHTML = `
+          <div class="forum-post-header">
+            <div>
+              <strong class="forum-post-author">${post.username || post.id_user || '-'}</strong>
+              <span class="forum-post-time">${formatDateTime(post.dibuat_pada)}</span>
+            </div>
+            ${acaraData?.isOwner ? `<button class="forum-post-delete" data-post-delete="${post.id_post}" title="Hapus post"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 10v6M14 10v6"/></svg></button>` : ''}
+          </div>
+          ${post.judul ? `<h4 class="forum-post-judul">${post.judul}</h4>` : ''}
+          <p class="forum-post-konten">${post.konten}</p>
+          <div class="forum-komentar-wrap">
+            <div class="forum-komentar-list" id="komentarList-${post.id_post}"></div>
+            <div class="forum-komentar-form">
+              <textarea class="forum-textarea forum-komentar-input" id="komentarInput-${post.id_post}" placeholder="Tulis komentar..." rows="2"></textarea>
+              <button class="modal-btn primary forum-komentar-btn" data-komentar-post="${post.id_post}" type="button">Kirim</button>
+            </div>
+          </div>`;
+        forumPostsEl.appendChild(postEl);
+        loadComments(post.id_post);
+      }
+
+      // Post delete handler (owner only)
+      forumPostsEl.querySelectorAll('[data-post-delete]').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!await openConfirmModal('Hapus postingan ini beserta semua komentarnya?')) return;
+          try {
+            const resp = await fetch(API_CONFIG.getAcaraPostDeleteUrl(btn.dataset.postDelete), {
+              method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+            });
+            const d = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(d.message || 'Gagal menghapus post.');
+            showToast('Postingan dihapus.', 'success');
+            loadPosts();
+          } catch (err) { showToast(err.message || 'Gagal menghapus post.', 'error'); }
+        });
+      });
+
+      // Comment submit handlers (all participants)
+      forumPostsEl.querySelectorAll('[data-komentar-post]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const idPost = btn.dataset.komentarPost;
+          const input = document.getElementById(`komentarInput-${idPost}`);
+          const konten = input?.value.trim();
+          if (!konten) { showToast('Tulis komentar terlebih dahulu.', 'error'); return; }
+          btn.disabled = true;
+          try {
+            const resp = await fetch(API_CONFIG.getKomentarCreateUrl(idPost), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ konten })
+            });
+            const d = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(d.message || 'Gagal mengirim komentar.');
+            input.value = '';
+            showToast('Komentar terkirim.', 'success');
+            loadComments(idPost);
+          } catch (err) { showToast(err.message || 'Gagal mengirim komentar.', 'error'); }
+          finally { btn.disabled = false; }
+        });
+      });
+    } catch (err) {
+      console.error(err);
+      setEmpty(forumEmptyEl, 'Gagal memuat diskusi.', true);
+    }
+  }
+
+  async function loadComments(idPost) {
+    const listEl = document.getElementById(`komentarList-${idPost}`);
+    if (!listEl) return;
+    try {
+      const resp = await fetch(API_CONFIG.getKomentarListUrl(idPost), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json().catch(() => ({}));
+      const komentars = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+      listEl.innerHTML = '';
+      if (komentars.length === 0) return;
+      komentars.forEach((k) => {
+        const div = document.createElement('div');
+        div.className = 'forum-komentar-item';
+        div.innerHTML = `
+          <strong>${k.username || k.id_user || '-'}</strong>
+          <span class="forum-post-time">${formatDateTime(k.dibuat_pada)}</span>
+          ${acaraData?.isOwner ? `<button class="forum-komentar-delete" data-komentar-delete="${k.id_komentar}" title="Hapus komentar"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 10v6M14 10v6"/></svg></button>` : ''}
+          <p>${k.konten}</p>`;
+        listEl.appendChild(div);
+      });
+
+      listEl.querySelectorAll('[data-komentar-delete]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!await openConfirmModal('Hapus komentar ini?')) return;
+          try {
+            const resp = await fetch(API_CONFIG.getKomentarDeleteUrl(btn.dataset.komentarDelete), {
+              method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+            });
+            const d = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(d.message || 'Gagal menghapus komentar.');
+            showToast('Komentar dihapus.', 'success');
+            loadComments(idPost);
+          } catch (err) { showToast(err.message || 'Gagal menghapus komentar.', 'error'); }
+        });
+      });
+    } catch (_) {}
+  }
+
+  // Create post modal handler (owner)
+  if (forumCreateBtn) {
+    forumCreateBtn.addEventListener('click', () => {
+      if (document.querySelector('.modal-overlay')) return;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="Buat diskusi">
+          <div class="modal-header">
+            <h2 class="modal-title">Buat Diskusi Baru</h2>
+            <p class="modal-subtitle">Mulai diskusi baru untuk acara ini.</p>
+          </div>
+          <form class="modal-form" id="createPostForm">
+            <div class="modal-field">
+              <label class="modal-label" for="modalPostJudul">Judul</label>
+              <input class="modal-input" id="modalPostJudul" type="text" placeholder="Judul diskusi (opsional)" />
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="modalPostKonten">Konten</label>
+              <textarea class="modal-input" id="modalPostKonten" placeholder="Tulis sesuatu..." style="resize:vertical;min-height:100px" required></textarea>
+            </div>
+            <div class="modal-actions">
+              <button class="modal-btn" type="button" data-modal-cancel>Batalkan</button>
+              <button class="modal-btn primary" type="submit">Posting</button>
+            </div>
+          </form>
+        </div>`;
+
+      document.body.appendChild(overlay);
+      const onKeyDown = (e) => { if (e.key === 'Escape') closeModal(overlay, onKeyDown); };
+      document.addEventListener('keydown', onKeyDown);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay, onKeyDown); });
+      overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', () => closeModal(overlay, onKeyDown));
+
+      overlay.querySelector('#createPostForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = e.currentTarget;
+        const judul = f.judul?.value?.trim() || null;
+        const konten = f.konten?.value?.trim();
+        if (!konten) { showToast('Konten wajib diisi.', 'error'); return; }
+        try {
+          const resp = await fetch(API_CONFIG.getAcaraPostCreateUrl(idAcara), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ judul, konten })
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal membuat postingan.');
+          showToast('Postingan berhasil dibuat.', 'success');
+          closeModal(overlay, onKeyDown);
+          loadPosts();
+        } catch (err) { showToast(err.message || 'Gagal membuat postingan.', 'error'); }
+      });
+    });
+  }
+
+  await loadAcara();
+  await loadPosts();
+}
+
+/* ============================================================
+   USER ACARA — List & Saya
+============================================================ */
+
+async function initUserAcaraList(actualRole, token) {
+  const listEl = document.getElementById('userAcaraList');
+  const emptyEl = document.getElementById('userAcaraEmpty');
+  if (!listEl) return;
+
+  function setEmpty(msg, show) {
+    if (emptyEl) { emptyEl.textContent = msg; emptyEl.classList.toggle('is-visible', show); }
+  }
+
+  try {
+    setEmpty('Memuat data...', true);
+    const resp = await fetch(API_CONFIG.getAcaraBrowseUrl(), {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await resp.json().catch(() => ({}));
+    const acaras = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+
+    listEl.innerHTML = '';
+    if (acaras.length === 0) { setEmpty('Belum ada acara tersedia.', true); return; }
+    setEmpty('', false);
+
+    acaras.forEach((acara) => {
+      const card = document.createElement('div');
+      card.className = 'card org-acara-card';
+      card.innerHTML = `
+        <div class="org-acara-card-top">
+          <h3 class="org-acara-judul">${acara.judul || 'Tanpa Judul'}</h3>
+          <span class="status-pill status-${getAcaraStatus(acara)}">${ACARA_STATUS_LABEL[getAcaraStatus(acara)] || getAcaraStatus(acara)}</span>
+        </div>
+        <p class="org-acara-meta"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>${formatDateTime(acara.tanggal_mulai)}</p>
+        <p class="org-acara-creator">Dibuat oleh ${acara.creator_name || acara.id_user || '-'}</p>
+        <button class="modal-btn primary acara-ikuti-btn" type="button" data-ikuti-id="${acara.id_acara}" data-ikuti-mulai="${acara.tanggal_mulai}">Ikuti Acara</button>`;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.acara-ikuti-btn')) return;
+        window.location.href = buildPagesUrl(`dashboard/organizer/acara-detail.html?id=${acara.id_acara}`);
+      });
+      listEl.appendChild(card);
+    });
+
+    // Ikuti Acara button handlers
+    listEl.querySelectorAll('.acara-ikuti-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = 'Mengikuti...';
+        const idAcara = btn.dataset.ikutiId;
+        const tglMulai = btn.dataset.ikutiMulai;
+        try {
+          const now = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          const fmt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          const resp = await fetch(API_CONFIG.getAcaraIkutiCreateUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ id_acara: Number(idAcara), tanggal_mulai: tglMulai, tanggal_diikuti: fmt })
+          });
+          const d = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(d.message || 'Gagal mengikuti acara.');
+          showToast('Berhasil mengikuti acara!', 'success');
+          const card = btn.closest('.org-acara-card');
+          if (card) card.remove();
+          const remaining = listEl.querySelectorAll('.org-acara-card').length;
+          if (remaining === 0) setEmpty('Belum ada acara tersedia.', true);
+        } catch (err) {
+          showToast(err.message || 'Gagal mengikuti acara.', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Ikuti Acara';
+        }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    setEmpty('Gagal memuat data.', true);
+    showToast(err.message || 'Gagal memuat acara.', 'error');
+  }
+}
+
+async function initUserAcaraSaya(actualRole, token) {
+  const listEl = document.getElementById('userAcaraSayaList');
+  const emptyEl = document.getElementById('userAcaraSayaEmpty');
+  if (!listEl) return;
+
+  function setEmpty(msg, show) {
+    if (emptyEl) { emptyEl.textContent = msg; emptyEl.classList.toggle('is-visible', show); }
+  }
+
+  try {
+    setEmpty('Memuat data...', true);
+    const user = JSON.parse(localStorage.getItem('authUser') || '{}');
+    const resp = await fetch(API_CONFIG.getAcaraIkutiByUserUrl(user.id_user || ''), {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await resp.json().catch(() => ({}));
+    const acaras = resp.ok ? (Array.isArray(data.data) ? data.data : []) : [];
+
+    listEl.innerHTML = '';
+    if (acaras.length === 0) { setEmpty('Belum mengikuti acara apapun.', true); return; }
+    setEmpty('', false);
+
+    acaras.forEach((acara) => {
+      const card = document.createElement('div');
+      card.className = 'card org-acara-card';
+      card.innerHTML = `
+        <div class="org-acara-card-top">
+          <h3 class="org-acara-judul">${acara.judul || 'Tanpa Judul'}</h3>
+          <span class="status-pill status-${getAcaraStatus(acara)}">${ACARA_STATUS_LABEL[getAcaraStatus(acara)] || getAcaraStatus(acara)}</span>
+        </div>
+        <p class="org-acara-meta"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>${formatDateTime(acara.tanggal_mulai)}</p>
+        <p class="org-acara-creator">Dibuat oleh ${acara.creator_name || acara.id_user || '-'}</p>`;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => {
+        window.location.href = buildPagesUrl(`dashboard/organizer/acara-detail.html?id=${acara.id_acara}`);
+      });
+      listEl.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    setEmpty('Gagal memuat data.', true);
+    showToast(err.message || 'Gagal memuat acara.', 'error');
+  }
 }

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Manajer - Admin</title>
+  <title>Absensi - AbsenYuk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../../styles/dashboard.css" />
 </head>
-<body class="is-loading" data-role="admin">
+<body class="is-loading" data-role="router" data-page="absensi">
   <div class="bg-noise"></div>
 
   <div class="loading-overlay" aria-live="polite">
@@ -29,8 +29,8 @@
           </svg>
         </div>
         <div class="profile-text">
-          <p class="profile-name" id="profileName">Hi, Admin</p>
-          <p class="profile-role" id="profileRole">Administrator</p>
+          <p class="profile-name" id="profileName">Hi, User</p>
+          <p class="profile-role" id="profileRole">Anggota</p>
         </div>
       </div>
 
@@ -78,8 +78,8 @@
     <main class="main">
       <header class="main-header">
         <div>
-          <h1 class="welcome-title" id="welcomeTitle">User Manajer</h1>
-          <p class="welcome-subtitle" id="welcomeSubtitle">Kelola data akun, role, dan akses user.</p>
+          <h1 class="welcome-title" id="welcomeTitle">Absensi</h1>
+          <p class="welcome-subtitle" id="welcomeSubtitle">Kelola absensi untuk setiap acara.</p>
         </div>
         <div class="header-icon" id="headerIcon" aria-hidden="true"></div>
       </header>
@@ -87,28 +87,18 @@
       <div class="header-line"></div>
 
       <section class="role-panel">
+        <!-- Acara Selector -->
         <div class="section-header">
-          <h2 class="section-title">Daftar User</h2>
+          <h2 class="section-title">Daftar Absensi</h2>
           <div class="user-search">
-            <label class="sr-only" for="userSearchInput">Cari email user</label>
             <div class="user-search-box">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3.5-3.5" />
-              </svg>
-              <input id="userSearchInput" type="search" placeholder="Cari email user..." autocomplete="off" />
+              <select id="absensiAcaraSelect" class="acara-status-filter" style="max-width:320px">
+                <option value="">-- Pilih Acara --</option>
+              </select>
             </div>
-            <button class="user-search-clear" id="userSearchClear" type="button">Clear</button>
-            <button class="user-create" id="userCreateBtn" type="button" aria-label="Buat user">
-              <span class="user-create-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </span>
-            </button>
+            <button class="user-create" id="absensiCreateBtn" type="button">Buat Absensi</button>
             <div class="export-dropdown">
-              <button class="user-create export-btn" id="userExportBtn" type="button" aria-label="Export user">
+              <button class="user-create export-btn" id="absensiExportBtn" type="button" disabled aria-label="Export absensi" title="Pilih acara terlebih dahulu">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px">
                   <path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v3h16v-3"/>
                 </svg>
@@ -122,9 +112,11 @@
           </div>
         </div>
 
-        <div class="user-list" id="userList"></div>
-        <p class="user-empty" id="userEmpty">Tidak ada data user.</p>
-        <div class="pagination" id="userPagination"></div>
+        <!-- Absensi List -->
+        <div class="absensi-list" id="absensiList"></div>
+
+        <!-- Empty State -->
+        <p class="user-empty" id="absensiEmpty">Pilih acara terlebih dahulu.</p>
       </section>
     </main>
   </div>

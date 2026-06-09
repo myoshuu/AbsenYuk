@@ -1,57 +1,19 @@
-const { createDocument, XMLSerializer } = require('./qr_dom');
+const QRCode = require('qrcode');
 
-let qrCodeModule = null;
-
-const loadQrCodeModule = () => {
-  if (qrCodeModule) return qrCodeModule;
-
-  if (typeof global.CanvasRenderingContext2D === 'undefined') {
-    global.CanvasRenderingContext2D = function CanvasRenderingContext2D() { };
-  }
-  if (typeof global.Image === 'undefined') {
-    global.Image = function Image() { };
-  }
-  if (typeof global.C2S === 'undefined') {
-    global.C2S = require('easyqrcodejs/src/canvas2svg');
-  }
-
-  qrCodeModule = require('easyqrcodejs');
-  return qrCodeModule;
-};
-
-const generateQrSvg = (text, size = 240) => {
-  const document = createDocument();
-  const prevDocument = global.document;
-  const prevXMLSerializer = global.XMLSerializer;
-  let svgText = null;
-
-  global.document = document;
-  global.XMLSerializer = XMLSerializer;
-  const QRCode = loadQrCodeModule();
-
+const generateQrSvg = async (text, size = 240) => {
   try {
-    const container = document.createElement('div');
-    new QRCode(container, {
-      text,
+    const svg = await QRCode.toString(text, {
+      type: 'svg',
       width: size,
-      height: size,
-      drawer: 'svg',
-      correctLevel: QRCode.CorrectLevel.H,
-      onRenderingEnd: (_options, dataURL) => {
-        svgText = dataURL || container.innerHTML || null;
-      }
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'H'
     });
-    if (!svgText) {
-      svgText = container.innerHTML || null;
-    }
-  } finally {
-    global.document = prevDocument;
-    global.XMLSerializer = prevXMLSerializer;
+    return svg;
+  } catch (error) {
+    console.error('QR generation error:', error);
+    return null;
   }
-
-  return svgText;
 };
 
-module.exports = {
-  generateQrSvg
-};
+module.exports = { generateQrSvg };

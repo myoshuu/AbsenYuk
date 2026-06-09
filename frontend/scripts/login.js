@@ -227,6 +227,16 @@ function initLogin() {
       // Store email in session/local storage for next page
       sessionStorage.setItem('userEmail', emailInput.value.trim());
 
+      // Check for redirect param
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect');
+      if (redirect) {
+        setTimeout(() => {
+          window.location.href = redirect;
+        }, 1500);
+        return;
+      }
+
       const roleValue = data?.data?.user?.tipe_akun || '';
       const role = roleValue.toString().toLowerCase();
       const dashboardUrl = role === 'admin'

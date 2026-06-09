@@ -11,7 +11,13 @@ const getAllAcara = async (req, res) => {
   }
 
   try {
-    const [result] = await db.query('SELECT * FROM tbl_acara WHERE id_user = ?', [id_user]);
+    const [result] = await db.query(
+      `SELECT a.*, u.username AS creator_name
+       FROM tbl_acara a
+       JOIN tbl_user u ON u.id_user = a.id_user
+       WHERE a.id_user = ?`,
+      [id_user]
+    );
 
     if (result.length === 0) {
       return res.status(404).json({
@@ -36,26 +42,41 @@ const getAllAcara = async (req, res) => {
 
 const getAcaraById = async (req, res) => {
   const { id } = req.params;
-  const { id_user } = req.user || {};
+  const { id_user, role } = req.user || {};
 
   if (!id_user) {
-    return res.status(401).json({
-      message: 'Token tidak valid.',
-      statusCode: 401
-    });
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
   }
 
   try {
-    const [result] = await db.query('SELECT * FROM tbl_acara WHERE id_acara = ? AND id_user = ?', [id, id_user]);
+    const [result] = await db.query(
+      `SELECT a.*, u.username AS creator_name,
+              (SELECT COUNT(*) FROM tbl_acara_ikuti WHERE id_acara = a.id_acara) AS peserta_ikut
+       FROM tbl_acara a
+       JOIN tbl_user u ON u.id_user = a.id_user
+       WHERE a.id_acara = ?`,
+      [id]
+    );
+
     if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Acara tidak ditemukan',
-        statusCode: 404
-      });
+      return res.status(404).json({ message: 'Acara tidak ditemukan', statusCode: 404 });
     }
+
+    const acara = result[0];
+    const isOwner = acara.id_user === id_user || role === 'admin';
+
+    let isParticipant = false;
+    if (!isOwner) {
+      const [ikuti] = await db.query(
+        'SELECT id_acara_ikuti FROM tbl_acara_ikuti WHERE id_acara = ? AND id_user = ? LIMIT 1',
+        [id, id_user]
+      );
+      isParticipant = ikuti.length > 0;
+    }
+
     return res.status(200).json({
       message: 'Acara berhasil diambil',
-      data: result[0],
+      data: { ...acara, isOwner, isParticipant },
       statusCode: 200
     });
   } catch (error) {
@@ -416,6 +437,40 @@ const updateStatusAcara = async (req, res) => {
   }
 };
 
+const getAcaraBrowse = async (req, res) => {
+  const { id_user } = req.user || {};
+
+  if (!id_user) {
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+  }
+
+  try {
+    const [result] = await db.query(
+      `SELECT a.*, u.username AS creator_name
+       FROM tbl_acara a
+       JOIN tbl_user u ON u.id_user = a.id_user
+       WHERE a.id_user != ?
+       AND a.id_acara NOT IN (
+         SELECT id_acara FROM tbl_acara_ikuti WHERE id_user = ?
+       )
+       ORDER BY a.tanggal_mulai DESC`,
+      [id_user, id_user]
+    );
+
+    return res.status(200).json({
+      message: 'Daftar acara berhasil diambil',
+      data: result,
+      statusCode: 200
+    });
+  } catch (error) {
+    console.error('Error: ', error);
+    return res.status(500).json({
+      message: 'Error mengambil daftar acara',
+      statusCode: 500
+    });
+  }
+};
+
 const deleteAcara = async (req, res) => {
   const { id } = req.params;
   const { id_user } = req.user || {};
@@ -466,6 +521,7 @@ const deleteAcara = async (req, res) => {
 module.exports = {
   getAllAcara,
   getAcaraById,
+  getAcaraBrowse,
   createAcara,
   updateAcara,
   updateJudulAcara,
