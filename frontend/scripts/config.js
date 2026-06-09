@@ -137,4 +137,5 @@ const API_CONFIG = {
   getDashboardSummaryUrl() {
     return this.API_BASE_URL + this.DASHBOARD_SUMMARY_ENDPOINT;
   }
+
 };
