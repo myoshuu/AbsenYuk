@@ -10,57 +10,6 @@
 // ─── Utility: DOM shortcut ────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-// ─── Utility: Validate email format ──────────────────────────────────────────
-function isValidEmail(val) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
-}
-
-// ─── Utility: Show field error ────────────────────────────────────────────────
-function showError(input, errorEl, msg) {
-  input.classList.add('is-error');
-  input.classList.remove('is-success');
-  errorEl.textContent = msg;
-  errorEl.classList.add('visible');
-}
-
-// ─── Utility: Clear field error ───────────────────────────────────────────────
-function clearError(input, errorEl) {
-  input.classList.remove('is-error');
-  errorEl.textContent = '';
-  errorEl.classList.remove('visible');
-}
-
-// ─── Utility: Mark field as valid ─────────────────────────────────────────────
-function markSuccess(input) {
-  input.classList.add('is-success');
-  input.classList.remove('is-error');
-}
-
-// ─── Utility: Toast notification ─────────────────────────────────────────────
-function showToast(msg, type = 'success', duration = 3200) {
-  document.querySelectorAll('.toast').forEach((t) => t.remove());
-
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => toast.classList.add('show'));
-  });
-
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 420);
-  }, duration);
-}
-
-// ─── Utility: Set button loading state ───────────────────────────────────────
-function setLoading(btn, loader, isLoading) {
-  btn.disabled = isLoading;
-  loader.classList.toggle('loading', isLoading);
-}
-
 // ─── Toggle password visibility ──────────────────────────────────────────────
 function initPasswordToggle() {
   const toggleBtn = $('togglePassword');
@@ -187,31 +136,10 @@ function initLogin() {
     setLoading(submitBtn, btnLoader, true);
 
     try {
-      const response = await fetch(API_CONFIG.getLoginUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: emailInput.value.trim(),
-          password: passwordInput.value
-        })
+      const data = await api.post(API_CONFIG.getLoginUrl(), {
+        email: emailInput.value.trim(),
+        password: passwordInput.value
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle error responses
-        if (response.status === 404) {
-          showToast('❌ Email belum terdaftar. Silakan register terlebih dahulu.', 'error');
-        } else if (response.status === 401) {
-          showToast('❌ Email atau password salah.', 'error');
-        } else {
-          showToast(`❌ ${data.message || 'Terjadi kesalahan pada server.'}`, 'error');
-        }
-        setLoading(submitBtn, btnLoader, false);
-        return;
-      }
 
       // Successful login
       showToast('✓ Login berhasil! Selamat datang kembali.', 'success');
@@ -254,7 +182,13 @@ function initLogin() {
 
     } catch (error) {
       console.error('Login error:', error);
-      showToast('❌ Gagal terhubung ke server. Pastikan server berjalan.', 'error');
+      if (error.status === 404) {
+        showToast('❌ Email belum terdaftar. Silakan register terlebih dahulu.', 'error');
+      } else if (error.status === 401) {
+        showToast('❌ Email atau password salah.', 'error');
+      } else {
+        showToast(`❌ ${error.message || 'Gagal terhubung ke server.'}`, 'error');
+      }
       setLoading(submitBtn, btnLoader, false);
     }
   });

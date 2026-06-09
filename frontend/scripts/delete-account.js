@@ -17,10 +17,6 @@ const modalCancel  = document.getElementById('modalCancel');
 const modalConfirm = document.getElementById('modalConfirm');
 
 /* ─── Utilities ─────────────────────────────────────── */
-function isValidEmail(val) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
-}
-
 function showError(msg) {
   emailInput.classList.add('is-error');
   emailError.textContent = msg;
@@ -31,25 +27,6 @@ function clearError() {
   emailInput.classList.remove('is-error');
   emailError.textContent = '';
   emailError.classList.remove('visible');
-}
-
-function showToast(msg, type = 'success', duration = 3200) {
-  document.querySelectorAll('.toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 400);
-  }, duration);
-}
-
-function setLoading(isLoading) {
-  btnDelete.disabled = isLoading;
-  btnLoader.classList.toggle('loading', isLoading);
-  btnText.style.opacity = isLoading ? '0.6' : '1';
 }
 
 /* ─── Validate ──────────────────────────────────────── */
@@ -129,18 +106,28 @@ document.addEventListener('keydown', e => {
 });
 
 /* ─── Modal: Konfirmasi hapus ───────────────────────── */
-modalConfirm.addEventListener('click', () => {
+modalConfirm.addEventListener('click', async () => {
   closeModal();
-  setLoading(true);
+  setLoading(btnDelete, btnLoader, true);
+  btnText.style.opacity = '0.6';
 
-  // Simulate delete API call — replace with real backend call
-  setTimeout(() => {
-    setLoading(false);
+  try {
+    await api.del(API_CONFIG.getDeleteUserUrl(emailInput.value.trim()));
+
+    setLoading(btnDelete, btnLoader, false);
+    btnText.style.opacity = '1';
     showToast('✓ Akun berhasil dihapus.', 'success', 3000);
 
-    // Redirect ke halaman utama setelah akun dihapus
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    sessionStorage.clear();
+
     setTimeout(() => {
       window.location.href = '../homepage/index.html';
     }, 2800);
-  }, 2000);
+  } catch (err) {
+    setLoading(btnDelete, btnLoader, false);
+    btnText.style.opacity = '1';
+    showToast('❌ ' + (err.message || 'Gagal menghapus akun.'), 'error');
+  }
 });

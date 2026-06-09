@@ -65,7 +65,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server sudah online pada  http://localhost:${PORT}/ \n Buka frontend di http://localhost:${PORT}/pages/homepage/index.htmlx`);
+  console.log(`Server sudah online pada  http://localhost:${PORT}/ \n Buka frontend di http://localhost:${PORT}/pages/homepage/index.html`);
 });
 
 process.on('SIGTERM', async () => {

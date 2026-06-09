@@ -25,30 +25,6 @@ function getUserName() {
   }
 }
 
-function formatTanggal(dateStr) {
-  if (!dateStr) return '-';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
-    return d.toLocaleDateString('id-ID', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
-  } catch (_) {
-    return '-';
-  }
-}
-
-function buildPagesUrl(relativePath) {
-  const path = window.location.pathname.replace(/\\/g, '/');
-  const marker = '/pages/';
-  const idx = path.indexOf(marker);
-  if (idx === -1) {
-    return '/pages/' + relativePath;
-  }
-  return path.slice(0, idx + marker.length) + relativePath;
-}
-
 function showAlert(message, type) {
   const el = document.getElementById('isiAlert');
   el.textContent = message;
@@ -117,20 +93,7 @@ async function initIsiAbsensi() {
   showLoading('Memuat data absensi...');
 
   try {
-    const response = await fetch(API_CONFIG.getAbsensiByTokenUrl(token), {
-      method: 'GET',
-      headers: { Authorization: 'Bearer ' + authToken }
-    });
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      if (response.status === 410 || response.status === 404) {
-        showExpired();
-        return;
-      }
-      throw new Error(data.message || 'Gagal memuat data absensi.');
-    }
-
+    const data = await api.get(API_CONFIG.getAbsensiByTokenUrl(token));
     const info = data.data || {};
     const statusQr = info.status_qr;
     const statusAbsensi = info.status_absensi;
@@ -157,7 +120,7 @@ async function initIsiAbsensi() {
     document.getElementById('isiInfo').style.display = 'grid';
     document.getElementById('isiUsername').textContent = info.username || '-';
     document.getElementById('isiAcara').textContent = info.judul_acara || '-';
-    document.getElementById('isiBerakhir').textContent = formatTanggal(info.akhir_absen);
+    document.getElementById('isiBerakhir').textContent = formatTanggalLengkap(info.akhir_absen);
 
     document.getElementById('isiForm').style.display = 'block';
     document.getElementById('isiTitle').textContent = info.judul_absensi || 'Isi Absensi';
@@ -165,6 +128,10 @@ async function initIsiAbsensi() {
 
   } catch (err) {
     console.error(err);
+    if (err.status === 404 || err.status === 410) {
+      showExpired();
+      return;
+    }
     showAlert(err.message || 'Terjadi kesalahan.', 'error');
   }
 }
@@ -192,23 +159,13 @@ function setupForm() {
     hideAlert();
 
     const token = getQueryParam('token');
-    const authToken = localStorage.getItem('authToken');
 
     try {
-      const response = await fetch(API_CONFIG.getSubmitAbsensiUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + authToken
-        },
-        body: JSON.stringify({
-          token: token,
-          keterangan: selected.value,
-          note: document.getElementById('isiNote').value.trim() || null
-        })
+      await api.post(API_CONFIG.getSubmitAbsensiUrl(), {
+        token: token,
+        keterangan: selected.value,
+        note: document.getElementById('isiNote').value.trim() || null
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Gagal mengirim absensi.');
 
       showSuccess();
     } catch (err) {
