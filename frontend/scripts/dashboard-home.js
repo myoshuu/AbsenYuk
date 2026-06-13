@@ -7,30 +7,152 @@ async function fetchAdminSummary(token) {
 }
 
 async function initAdminSummary(token) {
-  const fields = ['totalUser', 'totalAcara', 'totalAbsensi', 'tingkatKehadiran'];
-  const hasAnyField = fields.some((key) => document.querySelector(`[data-summary="${key}"]`));
-  if (!hasAnyField) return;
-
-  fields.forEach((key) => {
-    const el = document.querySelector(`[data-summary="${key}"]`);
-    if (el) el.textContent = '-';
-  });
-
   try {
-    const summary = await fetchAdminSummary(token);
-    fields.forEach((key) => {
-      const el = document.querySelector(`[data-summary="${key}"]`);
-      if (el) {
-        el.textContent = summary[key] ?? 'Data Kosong';
-      }
-    });
+    const [summary, monthlyRes] = await Promise.all([
+      fetchAdminSummary(token),
+      api.get(API_CONFIG.getDashboardMonthlyUrl()).catch(() => ({ data: {} }))
+    ]);
+
+    renderMetricCards(summary);
+    renderGauge(summary);
+    renderComparisonChart(monthlyRes?.data || {});
   } catch (error) {
     console.error(error);
-    fields.forEach((key) => {
-      const el = document.querySelector(`[data-summary="${key}"]`);
-      if (el) el.textContent = 'Data Kosong';
+    ['metricUserVal', 'metricAcaraVal', 'metricAbsensiVal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = 'Error';
     });
   }
+}
+
+function renderMetricCards(summary) {
+  const vals = [
+    { id: 'metricUserVal', val: parseInt(summary.totalUser) || 0 },
+    { id: 'metricAcaraVal', val: parseInt(summary.totalAcara) || 0 },
+    { id: 'metricAbsensiVal', val: parseInt(summary.totalAbsensi) || 0 }
+  ];
+
+  const max = Math.max(1, ...vals.map(v => v.val));
+
+  vals.forEach(({ id, val }) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = formatNumber(val);
+  });
+
+  const barIds = ['metricUserBar', 'metricAcaraBar', 'metricAbsensiBar'];
+  vals.forEach((v, i) => {
+    const el = document.getElementById(barIds[i]);
+    if (el) {
+      el.style.width = '0%';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.width = ((v.val / max) * 100) + '%';
+        });
+      });
+    }
+  });
+}
+
+function renderGauge(summary) {
+  const el = document.getElementById('summaryGaugeChart');
+  if (!el) return;
+
+  const raw = summary.tingkatKehadiran || '0';
+  const gaugeVal = Math.min(100, Math.max(0, parseInt(raw) || 0));
+  const hasData = raw !== 'Data Kosong' && raw !== '0' && raw !== '';
+
+  const r = 42;
+  const circ = 2 * Math.PI * r;
+  const targetOffset = circ - (gaugeVal / 100) * circ;
+
+  el.innerHTML = `
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 100 100" width="96" height="96" class="gauge-svg">
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="#e0dbd5" stroke-width="12"/>
+        ${hasData ? `<circle cx="50" cy="50" r="${r}" fill="none" stroke="#111" stroke-width="12"
+          stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round"
+          transform="rotate(-90 50 50)" id="gaugeArc"
+          style="transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)"/>` : ''}
+        <text x="50" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="#111">${hasData ? gaugeVal : '?'}</text>
+        <text x="50" y="66" text-anchor="middle" font-size="9" fill="#6b6b6b" font-weight="500">${hasData ? '%' : 'N/A'}</text>
+      </svg>
+    </div>`;
+
+  if (hasData) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const arc = document.getElementById('gaugeArc');
+        if (arc) arc.setAttribute('stroke-dashoffset', targetOffset);
+      });
+    });
+  }
+}
+
+function renderComparisonChart(data) {
+  const el = document.getElementById('comparisonChart');
+  if (!el) return;
+
+  const current = data.current || {};
+  const previous = data.previous || {};
+
+  if (!current.acara && current.acara !== 0) {
+    el.innerHTML = '<p class="chart-placeholder">Data bulanan belum tersedia</p>';
+    return;
+  }
+
+  // Acara + Absensi bar chart (counts)
+  const metrics = [
+    { label: 'Acara', current: current.acara ?? 0, previous: previous.acara ?? 0 },
+    { label: 'Absensi', current: current.absensi ?? 0, previous: previous.absensi ?? 0 }
+  ];
+  const maxVal = Math.max(1, ...metrics.map(m => Math.max(m.current, m.previous)));
+  const barMaxH = 120;
+  const svgW = 440;
+  const svgH = 170;
+  const groupW = svgW / metrics.length;
+  const barW = 56;
+  const gap = 14;
+  const yBase = 140;
+
+  let bars = '';
+  let groupLabels = '';
+  metrics.forEach((m, i) => {
+    const cx = i * groupW + (groupW - (barW * 2 + gap)) / 2;
+    const h1 = (m.current / maxVal) * barMaxH;
+    const h2 = (m.previous / maxVal) * barMaxH;
+    const origin = `${cx + barW / 2} ${yBase}`;
+    const origin2 = `${cx + barW + gap + barW / 2} ${yBase}`;
+
+    bars += `
+      <rect x="${cx}" y="${yBase - h1}" width="${barW}" height="${Math.max(h1, 1)}" rx="4" fill="#111"
+        style="transform-origin:${origin};transform:scaleY(0);transition:transform 0.5s cubic-bezier(0.22,1,0.36,1)" class="comp-bar"/>
+      <rect x="${cx + barW + gap}" y="${yBase - h2}" width="${barW}" height="${Math.max(h2, 1)}" rx="4" fill="#c4bfb8"
+        style="transform-origin:${origin2};transform:scaleY(0);transition:transform 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s" class="comp-bar"/>
+      <text x="${cx + barW / 2}" y="${yBase - h1 - 6}" text-anchor="middle" font-size="11" font-weight="700" fill="#111" opacity="0" class="comp-label">${m.current}</text>
+      <text x="${cx + barW + gap + barW / 2}" y="${yBase - h2 - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="#6b6b6b" opacity="0" class="comp-label">${m.previous}</text>
+      <text x="${cx + barW + gap / 2}" y="${yBase + 18}" text-anchor="middle" font-size="12" font-weight="600" fill="#111">${m.label}</text>
+    `;
+  });
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" style="display:block">
+      <line x1="20" y1="${yBase}" x2="${svgW - 20}" y2="${yBase}" stroke="#ddd" stroke-width="1"/>
+      ${bars}
+      <rect x="10" y="8" width="12" height="12" rx="3" fill="#111"/>
+      <text x="26" y="18" font-size="11" fill="#111" font-weight="600">Bulan Ini</text>
+      <rect x="110" y="8" width="12" height="12" rx="3" fill="#c4bfb8"/>
+      <text x="126" y="18" font-size="11" fill="#6b6b6b" font-weight="600">Bulan Lalu</text>
+    </svg>`;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.comp-bar').forEach(b => b.style.transform = 'scaleY(1)');
+      el.querySelectorAll('.comp-label').forEach(t => {
+        t.style.transition = 'opacity 0.3s ease 0.3s';
+        t.style.opacity = '1';
+      });
+    });
+  });
 }
 
 async function initOrganizerSummary(token) {
@@ -259,4 +381,10 @@ async function initUserHomepageEvents(actualRole, token, id_user) {
     grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0">Gagal memuat data.</p>';
     showToast(err.message || 'Gagal memuat acara.', 'error');
   }
+}
+
+function formatNumber(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'jt';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'rb';
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }

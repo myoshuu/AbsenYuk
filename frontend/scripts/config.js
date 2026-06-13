@@ -133,9 +133,13 @@ const API_CONFIG = {
 
   // --- DASHBOARD ---
   DASHBOARD_SUMMARY_ENDPOINT: '/dashboard/summary',
+  DASHBOARD_MONTHLY_ENDPOINT: '/dashboard/monthly-stats',
 
   getDashboardSummaryUrl() {
     return this.API_BASE_URL + this.DASHBOARD_SUMMARY_ENDPOINT;
+  },
+  getDashboardMonthlyUrl() {
+    return this.API_BASE_URL + this.DASHBOARD_MONTHLY_ENDPOINT;
   },
   getOrganizerSummaryUrl() {
     return `${this.API_BASE_URL}/dashboard/organizer-summary`;

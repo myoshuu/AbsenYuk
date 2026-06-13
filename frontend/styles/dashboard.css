@@ -231,6 +231,174 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* ── Metric Cards ──────────────────────────── */
+.metric-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.metric-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.metric-card-gauge {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 180px;
+}
+
+.metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--panel-strong);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.metric-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.metric-label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.metric-bar-track {
+  height: 4px;
+  background: #e0dbd5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--ink);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.metric-gauge .gauge-wrap {
+  padding: 0;
+}
+
+.metric-gauge .gauge-svg {
+  width: 96px;
+  height: 96px;
+}
+
+/* ── Card Entrance Animation ──────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes labelFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.metric-card,
+.comparison-card {
+  animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.metric-card:nth-child(1) { animation-delay: 0.04s; }
+.metric-card:nth-child(2) { animation-delay: 0.08s; }
+.metric-card:nth-child(3) { animation-delay: 0.12s; }
+.metric-card:nth-child(4) { animation-delay: 0.16s; }
+
+.comparison-card {
+  animation-delay: 0.24s;
+}
+
+/* ── Comparison Chart ──────────────────────── */
+.comparison-card {
+  padding: 20px 24px;
+  margin-bottom: 6px;
+}
+
+.comparison-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.comparison-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.comparison-body {
+  min-height: 180px;
+}
+
+.comparison-body svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.comp-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.comp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comp-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.chart-placeholder {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.gauge-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.gauge-svg {
+  display: block;
+}
+
 .summary-card {
   display: flex;
   align-items: center;
@@ -917,6 +1085,20 @@ body.is-loading .loading-overlay {
   .summary-grid-three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .metric-row {
+    flex-wrap: wrap;
+  }
+
+  .metric-card {
+    flex: 1 1 calc(50% - 14px);
+    min-width: 160px;
+  }
+
+  .metric-card-gauge {
+    flex: 1 1 100%;
+    max-width: 200px;
+  }
 }
 
 @media (max-width: 980px) {
@@ -1012,6 +1194,18 @@ body.is-loading .loading-overlay {
   .side-nav,
   .side-actions {
     grid-template-columns: 1fr;
+  }
+
+  .metric-row {
+    flex-direction: column;
+  }
+
+  .metric-card {
+    flex: 1 1 100%;
+  }
+
+  .metric-card-gauge {
+    max-width: 100%;
   }
 
   .section-header {

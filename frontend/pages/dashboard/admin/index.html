@@ -38,56 +38,59 @@
 
       <section class="role-panel">
         <h2 class="section-title">Ringkasan Sistem</h2>
-        <div class="summary-grid summary-grid-two">
-          <div class="card summary-card">
-            <div class="card-icon">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
+        <div class="metric-row">
+          <div class="card metric-card" id="metricUserCard">
+            <div class="metric-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M7 11a4 4 0 108 0 4 4 0 00-8 0z" />
                 <path d="M3 20c1.6-3 4.2-4.5 9-4.5S19.4 17 21 20" />
               </svg>
             </div>
-            <div>
-              <p class="card-number" data-summary="totalUser">-</p>
-              <p class="card-label">Total User</p>
+            <div class="metric-body">
+              <span class="metric-value" id="metricUserVal">-</span>
+              <span class="metric-label">Total User</span>
+              <div class="metric-bar-track"><div class="metric-bar-fill" id="metricUserBar" style="width:0%"></div></div>
             </div>
           </div>
-
-          <div class="card summary-card">
-            <div class="card-icon">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
+          <div class="card metric-card" id="metricAcaraCard">
+            <div class="metric-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8">
                 <rect x="3" y="5" width="18" height="16" rx="2" />
                 <path d="M7 3v4M17 3v4M3 10h18" />
               </svg>
             </div>
-            <div>
-              <p class="card-number" data-summary="totalAcara">-</p>
-              <p class="card-label">Total Acara</p>
+            <div class="metric-body">
+              <span class="metric-value" id="metricAcaraVal">-</span>
+              <span class="metric-label">Total Acara</span>
+              <div class="metric-bar-track"><div class="metric-bar-fill" id="metricAcaraBar" style="width:0%"></div></div>
             </div>
           </div>
-
-          <div class="card summary-card">
-            <div class="card-icon">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
+          <div class="card metric-card" id="metricAbsensiCard">
+            <div class="metric-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M7 12l3 3 7-7" />
                 <rect x="3" y="4" width="18" height="16" rx="2" />
               </svg>
             </div>
-            <div>
-              <p class="card-number" data-summary="totalAbsensi">-</p>
-              <p class="card-label">Total Absensi</p>
+            <div class="metric-body">
+              <span class="metric-value" id="metricAbsensiVal">-</span>
+              <span class="metric-label">Total Absensi</span>
+              <div class="metric-bar-track"><div class="metric-bar-fill" id="metricAbsensiBar" style="width:0%"></div></div>
             </div>
           </div>
-
-          <div class="card summary-card">
-            <div class="card-icon">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M4 20h16M7 16v-6M12 16V8M17 16V5" />
-              </svg>
+          <div class="card metric-card metric-card-gauge">
+            <div class="metric-gauge" id="summaryGaugeChart">
+              <div class="gauge-wrap"><p class="chart-placeholder">Memuat...</p></div>
             </div>
-            <div>
-              <p class="card-number" data-summary="tingkatKehadiran">-</p>
-              <p class="card-label">Tingkat Kehadiran</p>
-            </div>
+            <span class="metric-label">Tingkat Kehadiran</span>
+          </div>
+        </div>
+        <div class="card comparison-card">
+          <div class="comparison-header">
+            <h3 class="comparison-title">Perbandingan Bulanan</h3>
+          </div>
+          <div class="comparison-body" id="comparisonChart">
+            <p class="chart-placeholder">Memuat data...</p>
           </div>
         </div>
 
