@@ -1,6 +1,7 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const { ErrorCodes } = require('../utils/errors');
 
 function getTokenFromHeader(req) {
   const authHeader = req.headers.authorization || '';
@@ -14,23 +15,29 @@ function authenticateToken(req, res, next) {
   if (!token) {
     return res.status(401).json({
       message: 'Token tidak ditemukan.',
-      statusCode: 401
+      statusCode: 401,
+      errorCode: ErrorCodes.AUTH_TOKEN_MISSING
     });
   }
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     return res.status(500).json({
-      message: 'JWT secret belum diatur pada server.',
-      statusCode: 500
+      message: 'JWT secret belum dikonfigurasi.',
+      statusCode: 500,
+      errorCode: ErrorCodes.INTERNAL_ERROR
     });
   }
 
   jwt.verify(token, secret, (err, payload) => {
     if (err) {
+      const errorCode = err.name === 'TokenExpiredError'
+        ? ErrorCodes.AUTH_TOKEN_EXPIRED
+        : ErrorCodes.AUTH_TOKEN_INVALID;
       return res.status(401).json({
         message: 'Token tidak valid atau sudah kadaluarsa.',
-        statusCode: 401
+        statusCode: 401,
+        errorCode
       });
     }
 
@@ -40,18 +47,23 @@ function authenticateToken(req, res, next) {
 }
 
 function authorizeRoles(...roles) {
+  // Normalize to array: handle both 'admin' and ['admin'] formats
+  const normalizedRoles = roles.flat();
+
   return (req, res, next) => {
     if (!req.user || !req.user.role) {
       return res.status(403).json({
-        message: 'Akses ditolak.',
-        statusCode: 403
+        message: 'Akses ditolak. Token tidak valid.',
+        statusCode: 403,
+        errorCode: ErrorCodes.AUTH_ACCESS_DENIED
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!normalizedRoles.includes(req.user.role)) {
       return res.status(403).json({
-        message: 'Role tidak diizinkan.',
-        statusCode: 403
+        message: `Role '${req.user.role}' tidak diizinkan mengakses resource ini.`,
+        statusCode: 403,
+        errorCode: ErrorCodes.AUTH_ROLE_NOT_ALLOWED
       });
     }
 

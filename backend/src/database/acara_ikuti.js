@@ -1,27 +1,49 @@
 const db = require('./db');
+const { ErrorCodes } = require('../utils/errors');
 
 const getAllAcaraIkuti = async (req, res) => {
-
   try {
-    const [result] = await db.query('SELECT * FROM tbl_acara_ikuti');
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const offset = (page - 1) * limit;
 
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Data acara diikuti kosong',
-        statusCode: 404
+    const [[{ total }]] = await db.query('SELECT COUNT(*) AS total FROM tbl_acara_ikuti');
+
+    const [result] = await db.query(
+      `SELECT i.*, a.judul, a.lokasi, u.username AS creator_name
+       FROM tbl_acara_ikuti i
+       JOIN tbl_acara a ON a.id_acara = i.id_acara
+       JOIN tbl_user u ON u.id_user = a.id_user
+       ORDER BY i.tanggal_diikuti DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+
+    if (result.length === 0 && page === 1) {
+      return res.status(200).json({
+        message: 'Data acara diikuti kosong.',
+        data: [],
+        total: 0,
+        page,
+        limit,
+        statusCode: 200
       });
     }
 
     return res.status(200).json({
-      message: 'Daftar acara diikuti berhasil diambil',
+      message: 'Daftar acara diikuti berhasil diambil.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
-      message: 'Error mengambil daftar acara diikuti',
-      statusCode: 500
+      message: 'Error mengambil daftar acara diikuti.',
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };
@@ -104,22 +126,25 @@ const getAcaraIkutiByUserId = async (req, res) => {
     );
 
     if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Data acara diikuti untuk user ini kosong',
-        statusCode: 404
+      return res.status(200).json({
+        message: 'Data acara diikuti untuk user ini kosong.',
+        data: [],
+        statusCode: 200
       });
     }
 
     return res.status(200).json({
-      message: 'Daftar acara diikuti berdasarkan user berhasil diambil',
+      message: 'Daftar acara diikuti berdasarkan user berhasil diambil.',
       data: result,
+      total: result.length,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
-      message: 'Error mengambil acara diikuti berdasarkan user',
-      statusCode: 500
+      message: 'Error mengambil acara diikuti berdasarkan user.',
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };

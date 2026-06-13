@@ -128,21 +128,103 @@ async function initIsiAbsensi() {
 
   } catch (err) {
     console.error(err);
-    if (err.status === 404 || err.status === 410) {
+
+    // Handle error codes
+    if (err.errorCode === API_ERROR_CODES.RESOURCE_EXPIRED || err.status === 410) {
       showExpired();
       return;
     }
+    if (err.errorCode === API_ERROR_CODES.RESOURCE_NOT_FOUND || err.status === 404) {
+      showExpired();
+      return;
+    }
+    if (err.errorCode === API_ERROR_CODES.AUTH_TOKEN_INVALID || err.status === 401) {
+      showAlert('Sesi berakhir. Silakan login ulang.', 'error');
+      setTimeout(() => {
+        window.location.href = buildPagesUrl('login/login.html');
+      }, 2000);
+      return;
+    }
+
     showAlert(err.message || 'Terjadi kesalahan.', 'error');
   }
 }
 
 function setupForm() {
   const options = document.querySelectorAll('.isi-status-option');
-  options.forEach((opt) => {
+  const optionIds = ['optHadir', 'optSakit', 'optIzin', 'optTanpa'];
+
+  function selectOption(selectedOpt) {
+    options.forEach((o) => {
+      o.classList.remove('is-selected');
+      o.setAttribute('aria-checked', 'false');
+      o.setAttribute('tabindex', '-1');
+    });
+    selectedOpt.classList.add('is-selected');
+    selectedOpt.setAttribute('aria-checked', 'true');
+    selectedOpt.setAttribute('tabindex', '0');
+    selectedOpt.querySelector('input[type="radio"]').checked = true;
+  }
+
+  function handleKeyDown(e, currentIndex) {
+    let newIndex;
+
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault();
+        newIndex = (currentIndex + 1) % options.length;
+        break;
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault();
+        newIndex = (currentIndex - 1 + options.length) % options.length;
+        break;
+      case 'Home':
+        e.preventDefault();
+        newIndex = 0;
+        break;
+      case 'End':
+        e.preventDefault();
+        newIndex = options.length - 1;
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        const currentOpt = options[currentIndex];
+        selectOption(currentOpt);
+        return;
+      default:
+        return;
+    }
+
+    const newOpt = options[newIndex];
+    selectOption(newOpt);
+    newOpt.focus();
+  }
+
+  options.forEach((opt, index) => {
+    // Click handler
     opt.addEventListener('click', () => {
-      options.forEach((o) => o.classList.remove('is-selected'));
-      opt.classList.add('is-selected');
-      opt.querySelector('input[type="radio"]').checked = true;
+      selectOption(opt);
+    });
+
+    // Keyboard handler
+    opt.addEventListener('keydown', (e) => {
+      const currentIndex = Array.from(options).indexOf(document.activeElement);
+      if (currentIndex === -1) return;
+      handleKeyDown(e, currentIndex);
+    });
+
+    // Focus/blur for visual feedback
+    opt.addEventListener('focus', () => {
+      if (!opt.classList.contains('is-selected')) {
+        opt.style.outline = '2px solid var(--ink)';
+        opt.style.outlineOffset = '2px';
+      }
+    });
+    opt.addEventListener('blur', () => {
+      opt.style.outline = 'none';
     });
   });
 
@@ -169,7 +251,23 @@ function setupForm() {
 
       showSuccess();
     } catch (err) {
-      showAlert(err.message || 'Terjadi kesalahan.', 'error');
+      // Handle specific error codes
+      if (err.errorCode === API_ERROR_CODES.RESOURCE_EXPIRED || err.status === 410) {
+        showExpired();
+        return;
+      }
+      if (err.errorCode === API_ERROR_CODES.BUSINESS_ATTENDANCE_ALREADY_SUBMITTED || err.status === 409) {
+        showAlert('Anda sudah mengisi absensi ini. Tidak dapat mengisi ulang.', 'warning');
+      } else if (err.errorCode === API_ERROR_CODES.BUSINESS_ATTENDANCE_CLOSED) {
+        showAlert('Maaf, sesi absensi ini sudah ditutup.', 'error');
+      } else if (err.errorCode === API_ERROR_CODES.AUTH_TOKEN_INVALID || err.status === 401) {
+        showAlert('Sesi berakhir. Silakan login ulang.', 'error');
+        setTimeout(() => {
+          window.location.href = buildPagesUrl('login/login.html');
+        }, 2000);
+      } else {
+        showAlert(err.message || 'Terjadi kesalahan.', 'error');
+      }
       submitBtn.disabled = false;
       submitBtn.textContent = 'Kirim Absensi';
     }

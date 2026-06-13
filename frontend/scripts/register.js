@@ -152,19 +152,23 @@ function initRegister() {
     return true;
   }
 
-  // ── Username validator (maksimal 10 karakter, no spaces) ────────────────────
+  // ── Username validator (3-30 karakter, alphanumeric + underscore) ──────────
   function validateUsername(input, error) {
     const val = input.value.trim();
     if (!val) {
       showError(input, error, 'Username tidak boleh kosong.');
       return false;
     }
-    if (val.length > 10) {
-      showError(input, error, 'Username maksimal 10 karakter.');
+    if (val.length < 3) {
+      showError(input, error, 'Username minimal 3 karakter.');
       return false;
     }
-    if (/\s/.test(val)) {
-      showError(input, error, 'Username tidak boleh mengandung spasi.');
+    if (val.length > 30) {
+      showError(input, error, 'Username maksimal 30 karakter.');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(val)) {
+      showError(input, error, 'Username hanya boleh huruf, angka, dan underscore.');
       return false;
     }
     clearError(input, error);
@@ -172,7 +176,7 @@ function initRegister() {
     return true;
   }
 
-  // ── Password validator (minimal 8 karakter) ────────────────────────────────
+  // ── Password validator (minimal 8 karakter dengan huruf dan angka) ─────────────
   function validatePassword(input, error) {
     const val = input.value;
     if (!val) {
@@ -181,6 +185,10 @@ function initRegister() {
     }
     if (val.length < 8) {
       showError(input, error, 'Password minimal 8 karakter.');
+      return false;
+    }
+    if (!/[a-zA-Z]/.test(val) || !/\d/.test(val)) {
+      showError(input, error, 'Password harus mengandung huruf dan angka.');
       return false;
     }
     clearError(input, error);
@@ -242,10 +250,20 @@ function initRegister() {
 
     } catch (error) {
       console.error('Register error:', error);
-      if (error.status === 409) {
+
+      // Handle specific error codes
+      if (error.errorCode === API_ERROR_CODES.RATE_LIMIT_EXCEEDED) {
+        showToast('❌ Terlalu banyak percobaan registrasi. Coba lagi dalam 1 jam.', 'error');
+      } else if (error.status === 409 || error.errorCode === API_ERROR_CODES.RESOURCE_ALREADY_EXISTS) {
         showToast('❌ Email sudah terdaftar. Gunakan email lain atau login.', 'error');
+      } else if (error.errorCode === API_ERROR_CODES.VALIDATION_INVALID_EMAIL) {
+        showToast('❌ Format email tidak valid.', 'error');
+      } else if (error.errorCode === API_ERROR_CODES.VALIDATION_INVALID_PASSWORD) {
+        showToast('❌ Password harus minimal 8 karakter dengan huruf dan angka.', 'error');
+      } else if (error.errorCode === API_ERROR_CODES.VALIDATION_INVALID_FORMAT) {
+        showToast('❌ Format input tidak valid. Periksa kembali data Anda.', 'error');
       } else if (error.status === 400) {
-        showToast('❌ Semua field harus diisi.', 'error');
+        showToast(`❌ ${error.message || 'Semua field harus diisi.'}`, 'error');
       } else {
         showToast(`❌ ${error.message || 'Gagal terhubung ke server.'}`, 'error');
       }

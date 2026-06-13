@@ -1,4 +1,5 @@
 const db = require('./db');
+const { ErrorCodes } = require('../utils/errors');
 
 const createAbsensiLog = async (req, res) => {
   const { token, keterangan, note } = req.body;
@@ -134,18 +135,23 @@ const createAbsensiLog = async (req, res) => {
 const getAbsensiLogsByAbsensi = async (req, res) => {
   const { id_absensi } = req.params;
   const { id_user, role } = req.user || {};
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
 
   if (!id_user) {
     return res.status(401).json({
       message: 'Token tidak valid.',
-      statusCode: 401
+      statusCode: 401,
+      errorCode: ErrorCodes.AUTH_TOKEN_INVALID
     });
   }
 
   if (!id_absensi) {
     return res.status(400).json({
-      message: 'id_absensi wajib diisi',
-      statusCode: 400
+      message: 'id_absensi wajib diisi.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD
     });
   }
 
@@ -158,11 +164,17 @@ const getAbsensiLogsByAbsensi = async (req, res) => {
 
       if (cekAbsensi.length === 0) {
         return res.status(404).json({
-          message: 'Absensi tidak ditemukan',
-          statusCode: 404
+          message: 'Absensi tidak ditemukan.',
+          statusCode: 404,
+          errorCode: ErrorCodes.RESOURCE_NOT_FOUND
         });
       }
     }
+
+    const [[{ total }]] = await db.query(
+      'SELECT COUNT(*) AS total FROM tbl_absensi_log WHERE id_absensi = ?',
+      [id_absensi]
+    );
 
     const [result] = await db.query(
       `SELECT l.id_absensi_log, l.id_absensi, l.id_user, u.username, u.email, l.waktu_absen,
@@ -170,27 +182,25 @@ const getAbsensiLogsByAbsensi = async (req, res) => {
        FROM tbl_absensi_log l
        JOIN tbl_user u ON u.id_user = l.id_user
        WHERE l.id_absensi = ?
-       ORDER BY l.waktu_absen DESC`,
-      [id_absensi]
+       ORDER BY l.waktu_absen DESC
+       LIMIT ? OFFSET ?`,
+      [id_absensi, limit, offset]
     );
 
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Belum ada data absensi',
-        statusCode: 404
-      });
-    }
-
     return res.status(200).json({
-      message: 'Daftar log absensi berhasil diambil',
+      message: 'Daftar log absensi berhasil diambil.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
-      message: 'Error mengambil log absensi',
-      statusCode: 500
+      message: 'Error mengambil log absensi.',
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };
@@ -257,13 +267,16 @@ const deleteAbsensiLog = async (req, res) => {
 const getLogsByAcara = async (req, res) => {
   const { id_acara } = req.params;
   const { id_user, role } = req.user || {};
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
 
   if (!id_user) {
-    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401 });
+    return res.status(401).json({ message: 'Token tidak valid.', statusCode: 401, errorCode: ErrorCodes.AUTH_TOKEN_INVALID });
   }
 
   if (!id_acara) {
-    return res.status(400).json({ message: 'id_acara wajib diisi.', statusCode: 400 });
+    return res.status(400).json({ message: 'id_acara wajib diisi.', statusCode: 400, errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD });
   }
 
   try {
@@ -273,9 +286,16 @@ const getLogsByAcara = async (req, res) => {
         [id_acara, id_user]
       );
       if (cek.length === 0) {
-        return res.status(404).json({ message: 'Acara tidak ditemukan.', statusCode: 404 });
+        return res.status(404).json({ message: 'Acara tidak ditemukan.', statusCode: 404, errorCode: ErrorCodes.RESOURCE_NOT_FOUND });
       }
     }
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM tbl_absensi_log l
+       JOIN tbl_absensi a ON a.id_absensi = l.id_absensi
+       WHERE a.id_acara = ?`,
+      [id_acara]
+    );
 
     const [result] = await db.query(
       `SELECT l.id_absensi_log, l.id_absensi, l.id_user,
@@ -288,20 +308,25 @@ const getLogsByAcara = async (req, res) => {
        JOIN tbl_acara ac ON ac.id_acara = a.id_acara
        JOIN tbl_user u ON u.id_user = l.id_user
        WHERE a.id_acara = ?
-       ORDER BY l.waktu_absen DESC`,
-      [id_acara]
+       ORDER BY l.waktu_absen DESC
+       LIMIT ? OFFSET ?`,
+      [id_acara, limit, offset]
     );
 
     return res.status(200).json({
       message: 'Data log absensi berhasil diambil.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
       message: 'Error mengambil data log absensi.',
-      statusCode: 500
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };

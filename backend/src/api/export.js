@@ -7,7 +7,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/export/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/users', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { q } = req.query;
 
   try {
@@ -44,7 +44,7 @@ router.get('/export/users', authenticateToken, authorizeRoles('admin'), async (r
   }
 });
 
-router.get('/export/acara', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/acara', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { status } = req.query;
 
   try {
@@ -92,7 +92,7 @@ router.get('/export/acara', authenticateToken, authorizeRoles('admin'), async (r
   }
 });
 
-router.get('/export/absensi/:id_acara', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/absensi/:id_acara', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { id_acara } = req.params;
 
   try {
@@ -136,7 +136,7 @@ router.get('/export/absensi/:id_acara', authenticateToken, authorizeRoles('admin
   }
 });
 
-router.get('/export/logs/:id_acara', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/logs/:id_acara', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { id_acara } = req.params;
   const { status } = req.query;
 
@@ -195,7 +195,7 @@ function sendPdf(doc, res, filename) {
    PDF EXPORT ROUTES
 ============================================================ */
 
-router.get('/export/users/pdf', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/users/pdf', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { q } = req.query;
   try {
     let query = 'SELECT id_user, username, email, tipe_akun FROM tbl_user';
@@ -209,7 +209,7 @@ router.get('/export/users/pdf', authenticateToken, authorizeRoles('admin'), asyn
   } catch (error) { console.error(error); return res.status(500).json({ message: 'Gagal export PDF.', statusCode: 500 }); }
 });
 
-router.get('/export/acara/pdf', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/acara/pdf', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { status } = req.query;
   try {
     let query = `SELECT a.id_acara, a.judul, a.lokasi, a.tanggal_mulai, a.tanggal_akhir, a.maks_pengunjung, a.status, u.username AS creator_name FROM tbl_acara a JOIN tbl_user u ON u.id_user = a.id_user`;
@@ -223,7 +223,7 @@ router.get('/export/acara/pdf', authenticateToken, authorizeRoles('admin'), asyn
   } catch (error) { console.error(error); return res.status(500).json({ message: 'Gagal export PDF.', statusCode: 500 }); }
 });
 
-router.get('/export/absensi/:id_acara/pdf', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/absensi/:id_acara/pdf', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { id_acara } = req.params;
   try {
     const [rows] = await db.query(
@@ -235,7 +235,7 @@ router.get('/export/absensi/:id_acara/pdf', authenticateToken, authorizeRoles('a
   } catch (error) { console.error(error); return res.status(500).json({ message: 'Gagal export PDF.', statusCode: 500 }); }
 });
 
-router.get('/export/logs/:id_acara/pdf', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export/logs/:id_acara/pdf', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
   const { id_acara } = req.params;
   const { status } = req.query;
   try {

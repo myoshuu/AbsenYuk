@@ -182,10 +182,16 @@ function initLogin() {
 
     } catch (error) {
       console.error('Login error:', error);
-      if (error.status === 404) {
+
+      // Handle specific error codes
+      if (error.errorCode === API_ERROR_CODES.RATE_LIMIT_EXCEEDED) {
+        showToast('❌ Terlalu banyak percobaan. Coba lagi dalam 15 menit.', 'error');
+      } else if (error.status === 404 || error.errorCode === API_ERROR_CODES.RESOURCE_NOT_FOUND) {
         showToast('❌ Email belum terdaftar. Silakan register terlebih dahulu.', 'error');
-      } else if (error.status === 401) {
+      } else if (error.status === 401 || error.errorCode === API_ERROR_CODES.AUTH_TOKEN_INVALID) {
         showToast('❌ Email atau password salah.', 'error');
+      } else if (error.status === 429) {
+        showToast('❌ Terlalu banyak percobaan login. Coba lagi nanti.', 'error');
       } else {
         showToast(`❌ ${error.message || 'Gagal terhubung ke server.'}`, 'error');
       }

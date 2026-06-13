@@ -14,12 +14,23 @@
   <!-- NAVBAR -->
   <header class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="../homepage/index.html" class="nav-logo">AbsenYuk</a>
+      <a href="../homepage/index.html" class="nav-logo">
+        <span class="nav-logo-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <path d="M9 16l2 2 4-4" stroke-width="2.5"/>
+          </svg>
+        </span>
+        <span class="nav-logo-text">AbsenYuk</span>
+      </a>
       <nav class="nav-menu" aria-label="Navigasi utama">
         <a href="../homepage/index.html" class="nav-link">HOME</a>
-        <a href="../about/index.html" class="nav-link">ABOUT US</a>
-        <a href="index.html" class="nav-link active">FEATURES</a>
-        <a href="../login/register.html" class="nav-link nav-signup" id="navAuthLink">SIGN UP</a>
+        <a href="../about/index.html" class="nav-link">TENTANG KAMI</a>
+        <a href="index.html" class="nav-link active">FITUR</a>
+        <a href="../login/register.html" class="nav-link nav-signup" id="navAuthLink">DAFTAR</a>
       </nav>
       <button class="hamburger" id="hamburger" aria-label="Buka menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -30,9 +41,9 @@
   <!-- Mobile Drawer -->
   <div class="nav-drawer" id="navDrawer" aria-hidden="true">
     <a href="../homepage/index.html" class="drawer-link">Home</a>
-    <a href="../about/index.html" class="drawer-link">About Us</a>
-    <a href="index.html" class="drawer-link">Features</a>
-    <a href="../login/login.html" class="drawer-link drawer-signup" id="drawerAuthLink">Sign Up</a>
+    <a href="../about/index.html" class="drawer-link">Tentang Kami</a>
+    <a href="index.html" class="drawer-link">Fitur</a>
+    <a href="../login/register.html" class="drawer-link drawer-signup" id="drawerAuthLink">Daftar</a>
   </div>
   <div class="nav-overlay" id="navOverlay"></div>
 
@@ -42,13 +53,15 @@
       <div class="features-inner">
 
         <div class="features-header">
-          <h1 class="features-title">FITUR UNGGULAN</h1>
+          <span class="features-eyebrow">Fitur Unggulan</span>
+          <h1 class="features-title">Semua yang Anda Butuhkan</h1>
           <p class="features-subtitle">Semua yang anda butuhkan dalam satu platform.</p>
         </div>
 
         <div class="features-grid">
 
           <div class="feat-card">
+            <div class="feat-card-number" aria-hidden="true">01</div>
             <div class="feat-illustration">
               <svg viewBox="0 0 120 100" width="120" height="100" fill="none">
                 <circle cx="60" cy="32" r="16" stroke="#111" stroke-width="2"/>
@@ -61,9 +74,11 @@
             </div>
             <h3 class="feat-heading">Absensi QR Code</h3>
             <p class="feat-text">Hadirkan efisiensi dengan sistem absensi berbasis QR code. Peserta cukup scan kode untuk mencatat kehadiran secara instan dan akurat.</p>
-            </div>
+
+          </div>
 
           <div class="feat-card">
+            <div class="feat-card-number" aria-hidden="true">02</div>
             <div class="feat-illustration">
               <svg viewBox="0 0 120 100" width="120" height="100" fill="none">
                 <circle cx="60" cy="28" r="14" stroke="#111" stroke-width="2"/>
@@ -77,9 +92,11 @@
             </div>
             <h3 class="feat-heading">Kelola Event</h3>
             <p class="feat-text">Buat dan kelola acara dengan mudah. Atur jadwal, lokasi, dan kuota peserta dalam satu panel yang intuitif.</p>
-            </div>
+
+          </div>
 
           <div class="feat-card">
+            <div class="feat-card-number" aria-hidden="true">03</div>
             <div class="feat-illustration">
               <svg viewBox="0 0 120 100" width="120" height="100" fill="none">
                 <rect x="18" y="14" width="84" height="60" rx="4" stroke="#111" stroke-width="2"/>
@@ -93,9 +110,11 @@
             </div>
             <h3 class="feat-heading">Laporan Otomatis</h3>
             <p class="feat-text">Dapatkan laporan kehadiran secara otomatis. Pantau statistik, rekap data, dan unduh hasil absensi kapan saja.</p>
-            </div>
+
+          </div>
 
           <div class="feat-card">
+            <div class="feat-card-number" aria-hidden="true">04</div>
             <div class="feat-illustration">
               <svg viewBox="0 0 120 100" width="120" height="100" fill="none">
                 <circle cx="40" cy="32" r="14" stroke="#111" stroke-width="2"/>
@@ -108,9 +127,11 @@
             </div>
             <h3 class="feat-heading">Kelola Peserta</h3>
             <p class="feat-text">Atur peserta dengan mudah. Daftarkan, kelompokkan, dan pantau partisipasi setiap individu dalam setiap acara.</p>
-            </div>
+
+          </div>
 
           <div class="feat-card">
+            <div class="feat-card-number" aria-hidden="true">05</div>
             <div class="feat-illustration">
               <svg viewBox="0 0 120 100" width="120" height="100" fill="none">
                 <rect x="10" y="16" width="100" height="58" rx="4" stroke="#111" stroke-width="2"/>
@@ -127,7 +148,8 @@
             </div>
             <h3 class="feat-heading">Group Post dan Komentar</h3>
             <p class="feat-text">Berinteraksi dengan peserta melalui postingan dan komentar dalam grup acara. Bagikan pengumuman dan diskusikan topik secara terpusat.</p>
-            </div>
+
+          </div>
 
         </div>
       </div>
@@ -136,30 +158,54 @@
 
   <footer class="footer" id="footer">
     <div class="footer-grid">
-      <div class="footer-column footer-legal">
-        <div class="footer-icon">
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="7" y="13" width="3" height="3"/><rect x="12" y="13" width="3" height="3"/><rect x="17" y="13" width="3" height="3"/>
-          </svg>
+      <div class="footer-column footer-brand">
+        <a href="../homepage/index.html" class="footer-logo">
+          <span class="footer-logo-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <path d="M9 16l2 2 4-4" stroke-width="2.5"/>
+            </svg>
+          </span>
+          <span class="footer-logo-text">AbsenYuk</span>
+        </a>
+        <p class="footer-tagline">Solusi absensi modern untuk organisasi modern. Kelola acara dan absensi dengan mudah.</p>
+        <div class="footer-social">
+          <a href="#" class="social-link" aria-label="Instagram">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+            </svg>
+          </a>
+          <a href="#" class="social-link" aria-label="Twitter/X">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4l11.733 16h4.267l-11.733 -16zM4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/>
+            </svg>
+          </a>
         </div>
-        <p class="footer-legal-text">Copyright &copy; 2026</p>
-        <p class="footer-legal-text">All right reserved</p>
       </div>
       <div class="footer-column">
-        <h4 class="footer-col-title">Menus</h4>
+        <h4 class="footer-col-title">Navigasi</h4>
         <ul class="footer-list">
           <li><a href="../homepage/index.html" class="footer-link">Home</a></li>
-          <li><a href="../about/index.html" class="footer-link">About Us</a></li>
-          <li><a href="index.html" class="footer-link">Features</a></li>
+          <li><a href="../about/index.html" class="footer-link">Tentang Kami</a></li>
+          <li><a href="index.html" class="footer-link">Fitur</a></li>
         </ul>
       </div>
       <div class="footer-column">
-        <h4 class="footer-col-title">Social Media</h4>
+        <h4 class="footer-col-title">Legal</h4>
         <ul class="footer-list">
-          <li><a href="#" class="footer-link">Instagram</a></li>
-          <li><a href="#" class="footer-link">X</a></li>
+          <li><a href="#" class="footer-link">Kebijakan Privasi</a></li>
+          <li><a href="#" class="footer-link">Syarat & Ketentuan</a></li>
+          <li><a href="#" class="footer-link">Hubungi Kami</a></li>
         </ul>
       </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-copyright">Copyright &copy; 2026 AbsenYuk. All rights reserved.</p>
     </div>
   </footer>
 

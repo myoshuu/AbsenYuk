@@ -1,5 +1,113 @@
 'use strict';
 
+/* ─── Breadcrumb Generation ─────────────────────────────────────────── */
+function generateBreadcrumbs() {
+  const container = document.querySelector('.breadcrumb');
+  if (!container) return;
+
+  const path = window.location.pathname.replace(/\\/g, '/');
+
+  // Define breadcrumb mappings based on path patterns
+  const breadcrumbMap = [
+    // Admin pages
+    { pattern: /\/pages\/dashboard\/admin\/acara\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/admin/index.html') },
+      { label: 'Admin', href: buildPagesUrl('dashboard/admin/index.html') },
+      { label: 'Kelola Acara' }
+    ]},
+    { pattern: /\/pages\/dashboard\/admin\/user-manager\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/admin/index.html') },
+      { label: 'Admin', href: buildPagesUrl('dashboard/admin/index.html') },
+      { label: 'Kelola User' }
+    ]},
+    // Organizer pages
+    { pattern: /\/pages\/dashboard\/organizer\/acara\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/organizer/index.html') },
+      { label: 'Organizer', href: buildPagesUrl('dashboard/organizer/index.html') },
+      { label: 'Acara Saya' }
+    ]},
+    // Absensi pages
+    { pattern: /\/pages\/dashboard\/absensi\/index\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: 'Absensi' }
+    ]},
+    { pattern: /\/pages\/dashboard\/absensi\/logs\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: 'Absensi', href: buildPagesUrl('dashboard/absensi/index.html') },
+      { label: 'Log Absensi' }
+    ]},
+    { pattern: /\/pages\/dashboard\/absensi\/isi\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: 'Absensi', href: buildPagesUrl('dashboard/absensi/index.html') },
+      { label: 'Isi Absensi' }
+    ]},
+    // Profile
+    { pattern: /\/pages\/dashboard\/profile\/index\.html?$/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: 'Profil' }
+    ]},
+    // Default dashboard
+    { pattern: /\/pages\/dashboard\/(admin|organizer|user)\/index\.html?$/i, items: [
+      { label: 'Dashboard' }
+    ]},
+    // Generic dashboard fallback
+    { pattern: /\/pages\/dashboard\/.*/i, items: [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: getPageTitle() }
+    ]}
+  ];
+
+  // Find matching breadcrumb configuration
+  let breadcrumbItems = null;
+  for (const entry of breadcrumbMap) {
+    if (entry.pattern.test(path)) {
+      breadcrumbItems = entry.items;
+      break;
+    }
+  }
+
+  // Default fallback
+  if (!breadcrumbItems) {
+    breadcrumbItems = [
+      { label: 'Dashboard', href: buildPagesUrl('dashboard/user/index.html') },
+      { label: getPageTitle() }
+    ];
+  }
+
+  // Render breadcrumbs
+  container.innerHTML = `
+    <a href="${buildPagesUrl('homepage/index.html')}" class="breadcrumb-item breadcrumb-home" aria-label="Kembali ke homepage">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      Home
+    </a>
+    ${breadcrumbItems.map((item, index) => {
+      const isLast = index === breadcrumbItems.length - 1;
+      return `
+        <span class="breadcrumb-separator" aria-hidden="true">/</span>
+        ${isLast
+          ? `<span class="breadcrumb-item is-active" aria-current="page">${item.label}</span>`
+          : `<a href="${item.href || '#'}" class="breadcrumb-item">${item.label}</a>`
+        }
+      `;
+    }).join('')}
+  `;
+}
+
+/* ─── Get page title from current path ──────────────────────────────── */
+function getPageTitle() {
+  const path = window.location.pathname.replace(/\\/g, '/');
+  const match = path.match(/\/([^\/]+)\.html?$/i);
+  if (match) {
+    const pageName = match[1].replace(/[-_]/g, ' ');
+    return pageName.charAt(0).toUpperCase() + pageName.slice(1);
+  }
+  return 'Halaman';
+}
+
+/* ─── Sidebar Build ──────────────────────────────────────────────────── */
 function buildSidebar() {
   const host = document.querySelector('.sidebar-host');
   if (!host) return;
@@ -58,6 +166,9 @@ function buildSidebar() {
   `;
 
   host.replaceWith(aside);
+
+  // Generate breadcrumbs after sidebar is built
+  generateBreadcrumbs();
 }
 
 /* Automatically build sidebar on load if .sidebar-host exists */

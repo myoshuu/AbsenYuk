@@ -385,10 +385,10 @@ body {
 .toast {
   position: fixed;
   bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%) translateY(80px);
+  right: 28px;
+  transform: translateY(80px);
   padding: 13px 28px;
-  border-radius: 50px;
+  border-radius: 12px;
   font-family: var(--font);
   font-size: 0.87rem;
   font-weight: 600;
@@ -413,8 +413,71 @@ body {
 }
 
 .toast.show {
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   opacity: 1;
+}
+
+/* ===========================
+   REQUIRED FIELD INDICATOR
+=========================== */
+.required::after {
+  content: ' *';
+  color: var(--error);
+}
+
+/* ===========================
+   ACCESSIBILITY — Reduced Motion
+=========================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .card {
+    animation: none;
+  }
+
+  .btn-primary::after {
+    display: none;
+  }
+
+  .toast {
+    transition: opacity 0.15s ease !important;
+  }
+}
+
+/* ===========================
+   FOCUS STYLES — Accessibility
+=========================== */
+.input-field:focus-visible,
+.toggle-password:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===========================
+   BUTTON MICRO-INTERACTIONS
+=========================== */
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* ===========================
+   MODAL BACKDROP BLUR
+=========================== */
+.modal-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* ===========================

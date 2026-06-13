@@ -2,6 +2,42 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
+const { ErrorCodes } = require('../utils/errors');
+
+// ─── Validation Helpers ──────────────────────────────────────────
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 30;
+
+function isValidEmail(email) {
+  return EMAIL_REGEX.test(email);
+}
+
+function isValidPassword(password) {
+  if (password.length < PASSWORD_MIN_LENGTH) return false;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  return hasLetter && hasNumber;
+}
+
+function getPasswordStrength(password) {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[@$!%*?&]/.test(password)) score++;
+  return score;
+}
+
+function isValidUsername(username) {
+  if (!username) return false;
+  if (username.length < USERNAME_MIN_LENGTH) return false;
+  if (username.length > USERNAME_MAX_LENGTH) return false;
+  return /^[a-zA-Z0-9_]+$/.test(username);
+}
 
 const getUserById = async (req, res) => {
   const { id_user } = req.params;
@@ -85,10 +121,41 @@ const getAllUser = async (req, res) => {
 const registerUser = async (req, res) => {
   const { username, password, email } = req.body;
 
-  if (!username || !password || !email) return res.status(400).json({
-    message: 'Data field tidak boleh kosong.',
-    statusCode: 400
-  });
+  // Validation checks
+  if (!username || !password || !email) {
+    return res.status(400).json({
+      message: 'Semua field harus diisi.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD
+    });
+  }
+
+  // Email format validation
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      message: 'Format email tidak valid.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_INVALID_EMAIL
+    });
+  }
+
+  // Username validation
+  if (!isValidUsername(username)) {
+    return res.status(400).json({
+      message: `Username harus 3-30 karakter, hanya huruf, angka, dan underscore.`,
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_INVALID_FORMAT
+    });
+  }
+
+  // Password validation
+  if (!isValidPassword(password)) {
+    return res.status(400).json({
+      message: 'Password minimal 8 karakter dengan huruf dan angka.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_INVALID_PASSWORD
+    });
+  }
 
   const connection = await db.getConnection();
 
@@ -100,8 +167,9 @@ const registerUser = async (req, res) => {
     if (cekAkun.length > 0) {
       connection.rollback();
       return res.status(409).json({
-        message: 'Akun dengan email tersebut terdaftar.',
-        statusCode: 409
+        message: 'Email sudah terdaftar.',
+        statusCode: 409,
+        errorCode: ErrorCodes.RESOURCE_ALREADY_EXISTS
       });
     }
 
@@ -136,10 +204,21 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).json({
-    message: 'Data field tidak boleh kosong.',
-    statusCode: 400
-  });
+  if (!email || !password) {
+    return res.status(400).json({
+      message: 'Email dan password harus diisi.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD
+    });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      message: 'Format email tidak valid.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_INVALID_EMAIL
+    });
+  }
 
   const connection = await db.getConnection();
 
@@ -155,8 +234,9 @@ const loginUser = async (req, res) => {
     if (cekAkun.length <= 0) {
       await connection.rollback();
       return res.status(404).json({
-        message: `Akun dengan email ${email} belum terdaftar.`,
-        statusCode: 404
+        message: 'Akun tidak ditemukan.',
+        statusCode: 404,
+        errorCode: ErrorCodes.RESOURCE_NOT_FOUND
       });
     };
 
@@ -170,8 +250,9 @@ const loginUser = async (req, res) => {
     if (email != dbEmail || checkPass != true) {
       await connection.rollback();
       return res.status(401).json({
-        message: 'Email atau Password salah.',
-        statusCode: 401
+        message: 'Email atau password salah.',
+        statusCode: 401,
+        errorCode: ErrorCodes.AUTH_TOKEN_INVALID
       });
     };
 

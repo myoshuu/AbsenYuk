@@ -1,4 +1,5 @@
 const db = require('./db');
+const { ErrorCodes } = require('../utils/errors');
 
 const getEventAccess = async (id_acara, id_user, role, connection = null) => {
   if (role === 'admin') {
@@ -31,18 +32,23 @@ const getEventAccess = async (id_acara, id_user, role, connection = null) => {
 const getPostsByAcara = async (req, res) => {
   const { id_acara } = req.params;
   const { id_user, role } = req.user || {};
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const offset = (page - 1) * limit;
 
   if (!id_user) {
     return res.status(401).json({
       message: 'Token tidak valid.',
-      statusCode: 401
+      statusCode: 401,
+      errorCode: ErrorCodes.AUTH_TOKEN_INVALID
     });
   }
 
   if (!id_acara) {
     return res.status(400).json({
-      message: 'id_acara wajib diisi',
-      statusCode: 400
+      message: 'id_acara wajib diisi.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD
     });
   }
 
@@ -51,9 +57,15 @@ const getPostsByAcara = async (req, res) => {
     if (!access.allowed) {
       return res.status(403).json({
         message: 'Akses ditolak.',
-        statusCode: 403
+        statusCode: 403,
+        errorCode: ErrorCodes.AUTH_ACCESS_DENIED
       });
     }
+
+    const [[{ total }]] = await db.query(
+      'SELECT COUNT(*) AS total FROM tbl_acara_post WHERE id_acara = ?',
+      [id_acara]
+    );
 
     const [result] = await db.query(
       `SELECT p.id_post, p.id_acara, p.id_user, u.username, u.email,
@@ -61,28 +73,25 @@ const getPostsByAcara = async (req, res) => {
        FROM tbl_acara_post p
        JOIN tbl_user u ON u.id_user = p.id_user
        WHERE p.id_acara = ?
-       ORDER BY p.dibuat_pada DESC`,
-      [id_acara]
+       ORDER BY p.dibuat_pada DESC
+       LIMIT ? OFFSET ?`,
+      [id_acara, limit, offset]
     );
 
-    if (result.length === 0) {
-      return res.status(200).json({
-        message: 'Belum ada postingan untuk acara ini',
-        data: [],
-        statusCode: 200
-      });
-    }
-
     return res.status(200).json({
-      message: 'Daftar postingan berhasil diambil',
+      message: 'Daftar postingan berhasil diambil.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
-      message: 'Error mengambil daftar postingan',
-      statusCode: 500
+      message: 'Error mengambil daftar postingan.',
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };
@@ -372,18 +381,23 @@ const deletePost = async (req, res) => {
 const getKomentarByPost = async (req, res) => {
   const { id_post } = req.params;
   const { id_user, role } = req.user || {};
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const offset = (page - 1) * limit;
 
   if (!id_user) {
     return res.status(401).json({
       message: 'Token tidak valid.',
-      statusCode: 401
+      statusCode: 401,
+      errorCode: ErrorCodes.AUTH_TOKEN_INVALID
     });
   }
 
   if (!id_post) {
     return res.status(400).json({
-      message: 'id_post wajib diisi',
-      statusCode: 400
+      message: 'id_post wajib diisi.',
+      statusCode: 400,
+      errorCode: ErrorCodes.VALIDATION_REQUIRED_FIELD
     });
   }
 
@@ -395,8 +409,9 @@ const getKomentarByPost = async (req, res) => {
 
     if (postRows.length === 0) {
       return res.status(404).json({
-        message: 'Postingan tidak ditemukan',
-        statusCode: 404
+        message: 'Postingan tidak ditemukan.',
+        statusCode: 404,
+        errorCode: ErrorCodes.RESOURCE_NOT_FOUND
       });
     }
 
@@ -404,9 +419,15 @@ const getKomentarByPost = async (req, res) => {
     if (!access.allowed) {
       return res.status(403).json({
         message: 'Akses ditolak.',
-        statusCode: 403
+        statusCode: 403,
+        errorCode: ErrorCodes.AUTH_ACCESS_DENIED
       });
     }
+
+    const [[{ total }]] = await db.query(
+      'SELECT COUNT(*) AS total FROM tbl_acara_post_komentar WHERE id_post = ?',
+      [id_post]
+    );
 
     const [result] = await db.query(
       `SELECT k.id_komentar, k.id_post, k.id_user, u.username, u.email,
@@ -414,27 +435,25 @@ const getKomentarByPost = async (req, res) => {
        FROM tbl_acara_post_komentar k
        JOIN tbl_user u ON u.id_user = k.id_user
        WHERE k.id_post = ?
-       ORDER BY k.dibuat_pada ASC`,
-      [id_post]
+       ORDER BY k.dibuat_pada ASC
+       LIMIT ? OFFSET ?`,
+      [id_post, limit, offset]
     );
 
-    if (result.length === 0) {
-      return res.status(404).json({
-        message: 'Belum ada komentar untuk postingan ini',
-        statusCode: 404
-      });
-    }
-
     return res.status(200).json({
-      message: 'Daftar komentar berhasil diambil',
+      message: 'Daftar komentar berhasil diambil.',
       data: result,
+      total,
+      page,
+      limit,
       statusCode: 200
     });
   } catch (error) {
-    console.error('Error: ', error);
+    console.error('Error:', error);
     return res.status(500).json({
-      message: 'Error mengambil komentar',
-      statusCode: 500
+      message: 'Error mengambil komentar.',
+      statusCode: 500,
+      errorCode: ErrorCodes.DATABASE_ERROR
     });
   }
 };
