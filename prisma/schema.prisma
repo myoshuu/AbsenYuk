@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String @map("provider_account_id")
+  refresh_token     String? @map("refresh_token")
+  access_token      String? @map("access_token")
+  expires_at        Int? @map("expires_at")
+  token_type        String? @map("token_type")
+  scope             String?
+  id_token          String? @map("id_token")
+  session_state     String? @map("session_state")
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model User {
+  id        String   @id
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  avatar    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  acara         Acara[]
+  acaraPeserta  AcaraPeserta[]
+  chatMessages  ChatMessage[]
+  files         AcaraFile[]
+  absensiLog    AbsensiLog[]
+  exportLogs    ExportLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model Acara {
+  id          Int      @id @default(autoincrement())
+  organizerId String   @map("organizer_id")
+  judul       String
+  deskripsi   String?
+  lokasi      String?
+  tanggalMulai DateTime  @map("tanggal_mulai")
+  tanggalAkhir DateTime  @map("tanggal_akhir")
+  maksPeserta Int      @default(0) @map("maks_peserta")
+  status      String   @default("akan_datang")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  organizer   User              @relation(fields: [organizerId], references: [id])
+  peserta     AcaraPeserta[]
+  chat        ChatMessage[]
+  files       AcaraFile[]
+  absensi     Absensi[]
+
+  @@index([status])
+  @@index([tanggalMulai])
+  @@index([organizerId, createdAt])
+  @@index([status, createdAt])
+  @@map("acara")
+}
+
+model AcaraPeserta {
+  id       Int      @id @default(autoincrement())
+  acaraId  Int      @map("acara_id")
+  userId   String   @map("user_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  acara Acara @relation(fields: [acaraId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([acaraId, userId])
+  @@index([userId, joinedAt])
+  @@map("acara_peserta")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  acaraId   Int      @map("acara_id")
+  userId    String   @map("user_id")
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  acara Acara @relation(fields: [acaraId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([acaraId, createdAt])
+  @@index([userId, createdAt])
+  @@map("chat_messages")
+}
+
+model AcaraFile {
+  id         Int      @id @default(autoincrement())
+  acaraId    Int      @map("acara_id")
+  uploaderId String   @map("uploader_id")
+  namaFile   String   @map("nama_file")
+  namaAsli   String   @map("nama_asli")
+  tipeFile   String   @map("tipe_file")
+  ukuran     Int
+  path       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  acara    Acara @relation(fields: [acaraId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([acaraId])
+  @@index([uploaderId, createdAt])
+  @@map("files")
+}
+
+model Absensi {
+  id          Int      @id @default(autoincrement())
+  acaraId     Int      @map("acara_id")
+  organizerId String   @map("organizer_id")
+  judul       String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  acara   Acara            @relation(fields: [acaraId], references: [id], onDelete: Cascade)
+  detail  AbsensiDetail[]
+  logs    AbsensiLog[]
+
+  @@index([acaraId])
+  @@index([organizerId, createdAt])
+  @@map("absensi")
+}
+
+model AbsensiDetail {
+  id          Int      @id @default(autoincrement())
+  absensiId   Int      @map("absensi_id")
+  lokasi      String?
+  waktuMulai  DateTime @map("waktu_mulai")
+  waktuAkhir  DateTime? @map("waktu_akhir")
+  qrToken     String   @unique @map("qr_token")
+  qrImage     String?  @map("qr_image") @db.Text
+  qrExpiresAt DateTime? @map("qr_expires_at")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  absensi Absensi @relation(fields: [absensiId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("absensi_detail")
+}
+
+model AbsensiLog {
+  id         Int      @id @default(autoincrement())
+  absensiId  Int      @map("absensi_id")
+  userId     String   @map("user_id")
+  waktuAbsen DateTime @default(now()) @map("waktu_absen")
+  keterangan String
+  catatan    String?
+
+  absensi Absensi @relation(fields: [absensiId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([absensiId, userId])
+  @@index([userId, waktuAbsen])
+  @@index([absensiId, waktuAbsen])
+  @@map("absensi_log")
+}
+
+model ExportLog {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  tipeData    String   @map("tipe_data")
+  format      String
+  parameter   Json?
+  jumlahRecord Int    @default(0) @map("jumlah_record")
+  status      String   @default("success")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tipeData])
+  @@map("export_logs")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_resets")
+}
