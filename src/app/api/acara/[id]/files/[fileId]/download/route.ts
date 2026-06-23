@@ -1,9 +1,8 @@
-import fs from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { apiError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-server";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; fileId: string }> }) {
   const { id, fileId } = await params;
@@ -18,21 +17,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: { message: "File tidak ditemukan" } }, { status: 404 });
     }
 
-    const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), file.path);
-    if (!fs.existsSync(filePath)) return NextResponse.json({ error: { message: "File tidak ditemukan" } }, { status: 404 });
+    const { data, error } = await supabase.storage
+      .from("chum-bucket")
+      .createSignedUrl(file.path, 3600);
 
-    const buffer = fs.readFileSync(filePath);
-    const contentType = file.tipeFile === "pdf" ? "application/pdf"
-      : ["xlsx", "xls"].includes(file.tipeFile) ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (error || !data) {
+      return NextResponse.json(
+        { error: { message: "File tidak ditemukan di penyimpanan" } },
+        { status: 404 }
+      );
+    }
 
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${file.namaAsli}"`,
-        "Content-Length": buffer.length.toString(),
-      },
-    });
+    return NextResponse.redirect(data.signedUrl);
   } catch (error) {
     const err = apiError(error);
     return NextResponse.json(err.body, { status: err.status });

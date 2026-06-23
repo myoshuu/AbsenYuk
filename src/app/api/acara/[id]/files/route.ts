@@ -1,9 +1,8 @@
-import fs from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getFiles, createFile, deleteFile } from "@/models/file";
 import { apiError } from "@/lib/errors";
+import { supabase } from "@/lib/supabase-server";
 
 const ALLOWED = ["pdf", "xlsx", "xls", "docx", "doc"];
 
@@ -38,10 +37,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const fileName = `${id}-${Date.now()}.${ext}`;
-    const dir = path.join(process.cwd(), "storage", "files");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const storagePath = `acara-${id}/${fileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(path.join(dir, fileName), buffer);
+
+    const { error: uploadError } = await supabase.storage
+      .from("chum-bucket")
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      return NextResponse.json(
+        { error: { message: "Gagal mengupload file ke penyimpanan" } },
+        { status: 502 }
+      );
+    }
 
     await createFile({
       acara_id: Number(id),
@@ -50,7 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       nama_asli: file.name,
       tipe_file: ext,
       ukuran: file.size,
-      path: `storage/files/${fileName}`,
+      path: storagePath,
     });
 
     return NextResponse.json({ message: "File berhasil diupload" }, { status: 201 });

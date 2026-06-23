@@ -32,8 +32,6 @@ prisma/migrations/**
 
 # local files
 /storage/
-!public/uploads/.gitkeep
-!public/uploads/avatars/.gitkeep
 # turbo
 .turbo
 
@@ -47,5 +45,6 @@ next-env.d.ts
 # claude agent
 /.claude
 /.superpowers
+/.agents
 AGENTS.md
 

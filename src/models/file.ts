@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase-server";
 import { FileAcara } from "@/types";
 
 export async function getFiles(acaraId: number) {
@@ -46,6 +47,9 @@ export async function createFile(data: {
 
 export async function deleteFile(id: number) {
   const file = await prisma.acaraFile.findUnique({ where: { id }, select: { path: true } });
-  if (file) await prisma.acaraFile.delete({ where: { id } });
+  if (file) {
+    await supabase.storage.from("chum-bucket").remove([file.path])
+    await prisma.acaraFile.delete({ where: { id } });
+  }
   return file?.path;
 }

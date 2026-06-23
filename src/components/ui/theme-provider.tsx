@@ -1,6 +1,5 @@
 "use client"
 
-import Script from "next/script"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 
 const STORAGE_KEY = "theme"
@@ -42,21 +41,7 @@ export function ThemeProviderWrapper({ children }: { children: React.ReactNode }
   }, [])
 
   if (!mounted) {
-    return (
-      <>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function() {
-            try {
-              var t = localStorage.getItem("${STORAGE_KEY}") || "${DEFAULT_THEME}";
-              document.documentElement.classList.remove("light", "dark");
-              document.documentElement.classList.add(t);
-              document.documentElement.style.colorScheme = t;
-            } catch(e) {}
-          })()`}
-        </Script>
-        {children}
-      </>
-    )
+    return <>{children}</>
   }
 
   return (

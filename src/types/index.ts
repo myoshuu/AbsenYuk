@@ -33,9 +33,9 @@ export interface ChatMessage {
   id: number;
   acara_id: number;
   user_id: string;
+  username: string;
   message: string;
   created_at: Date;
-  username?: string;
   avatar?: string | null;
 }
 
