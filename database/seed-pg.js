@@ -1,9 +1,11 @@
-require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") });
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
 const { PrismaClient } = require("@prisma/client");
+const { PrismaPg } = require("@prisma/adapter-pg");
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg(process.env.DATABASE_URL);
+const prisma = new PrismaClient({ adapter });
 
 async function seed() {
   const adminPass = await bcrypt.hash("Admin123!", 12);

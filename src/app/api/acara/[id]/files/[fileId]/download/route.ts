@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { apiError } from "@/lib/errors";
@@ -16,9 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: { message: "File tidak ditemukan" } }, { status: 404 });
     }
 
-    const fs = require("fs");
-    const path = require("path");
-    const filePath = path.join(process.cwd(), file.path);
+    const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), file.path);
     if (!fs.existsSync(filePath)) return NextResponse.json({ error: { message: "File tidak ditemukan" } }, { status: 404 });
 
     const buffer = fs.readFileSync(filePath);

@@ -68,7 +68,7 @@ export default function ProfilePage() {
     const parsed = profileSchema.safeParse({ username });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
+      parsed.error.issues.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
       setErrors(fieldErrors);
       return;
     }
@@ -98,7 +98,7 @@ export default function ProfilePage() {
     const parsed = passwordSchema.safeParse(pwForm);
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
+      parsed.error.issues.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
       setErrors(fieldErrors);
       return;
     }
