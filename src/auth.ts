@@ -3,6 +3,13 @@ import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
+function resolveAvatarUrl(avatar: string | null | undefined): string | null | undefined {
+  if (avatar?.startsWith("avatars/")) {
+    return `/api/user/avatar/serve?key=${avatar}`
+  }
+  return avatar
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -27,7 +34,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.username,
           email: user.email,
           role: user.role as "user" | "organizer" | "admin",
-          image: user.avatar,
+          image: resolveAvatarUrl(user.avatar),
         }
       }
     })
@@ -50,7 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             select: { avatar: true, username: true }
           })
           if (updatedUser) {
-            token.picture = updatedUser.avatar
+            token.picture = resolveAvatarUrl(updatedUser.avatar)
             token.name = updatedUser.username
             token.loadedAt = Date.now()
           }
@@ -65,11 +72,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as any).id = token.id as string
         (session.user as any).role = token.role
         session.user.name = token.name as string
-        // Append timestamp to avatar URL for cache busting
         const baseAvatar = token.picture as string | null | undefined
         const loadedAt = token.loadedAt as number | undefined
         if (baseAvatar && loadedAt) {
-          session.user.image = `${baseAvatar}?t=${loadedAt}`
+          const sep = baseAvatar.includes("?") ? "&" : "?"
+          session.user.image = `${baseAvatar}${sep}t=${loadedAt}`
         } else if (baseAvatar) {
           session.user.image = baseAvatar
         } else {

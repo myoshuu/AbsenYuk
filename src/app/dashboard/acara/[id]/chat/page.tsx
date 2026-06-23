@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { LoadingPage } from "@/components/shared/Loading";
 import { toast } from "sonner";
+import { supabaseClient } from "@/lib/supabase-client";
 
-interface MessageData { id: number; user_id: string; message: string; username: string; }
+interface MessageData { id: number; user_id: string; username: string; message: string; }
 
 export default function ChatPage() {
   const { id } = useParams();
@@ -15,7 +16,7 @@ export default function ChatPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [chatStatus, setChatStatus] = useState<"connected" | "polling" | "disconnected">("disconnected");
+  const [chatStatus, setChatStatus] = useState<"connected" | "disconnected">("disconnected");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -32,64 +33,32 @@ export default function ChatPage() {
   }, [id]);
 
   useEffect(() => {
-    const POLL_INTERVAL = 5000;
-    let pollingTimer: ReturnType<typeof setInterval> | null = null;
-    let lastMessageId = 0;
-
-    const startPolling = () => {
-      if (pollingTimer) return;
-      pollingTimer = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/acara/${id}/chat`);
-          if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data)) {
-              setMessages((prev: MessageData[]) => {
-                const existingIds = new Set(prev.map((m) => m.id));
-                const unique = data.filter((m) => m.id > lastMessageId && !existingIds.has(m.id));
-                if (unique.length > 0) {
-                  lastMessageId = Math.max(...unique.map((m) => m.id));
-                }
-                return [...prev, ...unique];
-              });
-            }
-          }
-        } catch (e) {
-          console.error("Polling error:", e);
+    const channel = supabaseClient
+      .channel(`chat-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `acara_id=eq.${id}`,
+        },
+        (payload) => {
+          const msg = payload.new as MessageData
+          setMessages((prev) =>
+            prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+          )
         }
-      }, POLL_INTERVAL);
-    };
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setChatStatus("connected")
+        } else {
+          setChatStatus("disconnected")
+        }
+      })
 
-    const stopPolling = () => {
-      if (pollingTimer) {
-        clearInterval(pollingTimer);
-        pollingTimer = null;
-      }
-    };
-
-    let es: EventSource | null = null;
-    es = new EventSource(`/api/acara/${id}/chat/stream`);
-    es.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        setMessages((prev: MessageData[]) => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-      } catch {}
-    };
-    es.onerror = () => {
-      console.log("SSE error, starting polling fallback");
-      setChatStatus("polling");
-      startPolling();
-    };
-    es.onopen = () => {
-      console.log("SSE connected, stopping polling");
-      setChatStatus("connected");
-      stopPolling();
-    };
-
-    return () => {
-      es?.close();
-      stopPolling();
-    };
+    return () => { supabaseClient.removeChannel(channel) }
   }, [id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -143,12 +112,10 @@ export default function ChatPage() {
               <h2 className="font-semibold text-ink">Chat Grup</h2>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${
-                  chatStatus === "connected" ? "bg-emerald animate-pulse" :
-                  chatStatus === "polling" ? "bg-amber-500" : "bg-error"
+                  chatStatus === "connected" ? "bg-emerald animate-pulse" : "bg-error"
                 }`} />
                 <span className="text-xs text-ink-muted">
-                  {chatStatus === "connected" ? "Terhubung via real-time" :
-                   chatStatus === "polling" ? "Memuat..." : "Terputus"}
+                  {chatStatus === "connected" ? "Terhubung via real-time" : "Terputus"}
                 </span>
               </div>
             </div>

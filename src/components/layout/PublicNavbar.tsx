@@ -40,7 +40,7 @@ export default function PublicNavbar() {
             >
               {link.label}
               {pathname === link.href && (
-                <span className="absolute -bottom-[1px] left-3 right-3 h-0.5 bg-emerald rounded-full" />
+                <span className="absolute-bottom-[1px] left-3 right-3 h-0.5 bg-emerald rounded-full" />
               )}
             </Link>
           ))}
@@ -51,7 +51,7 @@ export default function PublicNavbar() {
               }`}>
                 Dashboard
                 {pathname === "/dashboard" && (
-                  <span className="absolute -bottom-[1px] left-4 right-4 h-0.5 bg-emerald rounded-full" />
+                  <span className="absolute-bottom-[1px] left-4 right-4 h-0.5 bg-emerald rounded-full" />
                 )}
               </Link>
               <button
