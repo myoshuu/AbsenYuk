@@ -33,7 +33,7 @@ export default function LoginPage() {
     const parsed = loginSchema.safeParse({ email, password });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
+      parsed.error.issues.forEach((e) => { fieldErrors[e.path[0] as string] = e.message; });
       setErrors(fieldErrors);
       setLoading(false);
       return;

@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
@@ -26,8 +28,6 @@ export async function POST(req: Request) {
   const fileName = `${userId}-${Date.now()}.${ext}`;
   const filePath = `uploads/avatars/${fileName}`;
 
-  const fs = require("fs");
-  const path = require("path");
   const dir = path.join(process.cwd(), "public", "uploads", "avatars");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 

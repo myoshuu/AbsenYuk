@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getFiles, createFile, deleteFile } from "@/models/file";
@@ -35,8 +37,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: { message: "Hanya PDF, Excel, atau Word" } }, { status: 400 });
     }
 
-    const fs = require("fs");
-    const path = require("path");
     const fileName = `${id}-${Date.now()}.${ext}`;
     const dir = path.join(process.cwd(), "storage", "files");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
